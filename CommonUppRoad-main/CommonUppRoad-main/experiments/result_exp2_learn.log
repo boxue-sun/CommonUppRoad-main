@@ -1,0 +1,252 @@
+
+SCENARIO: ZAM_Ramp-1_1-T-1_MAXTIME_10
+
+Options for the verification:
+  Generating no trace
+  Search order is breadth first
+  Using conservative space optimisation
+  Seed is 1716289228
+  State space representation uses minimal constraint systems with future testing
+  Using HashMap + Compress integers for discrete state storage
+
+Verifying formula 1 at query_exp2_learn.q:1
+ -- Formula is satisfied.
+ -- Result: (101 runs)
+Learning statistics for best strategy: 
+	Number of resets: 0
+	Number of iterations in last reset: 1
+	Number of iterations in total: 1
+
+
+ -- States explored : 0 states
+ -- CPU user time used : 5430 ms
+ -- Virtual memory used : 34245304 KiB
+ -- Resident memory used : 21504 KiB
+
+Verifying formula 2 at query_exp2_learn.q:2
+ -- Formula is satisfied.
+ -- States stored : 56 states
+ -- States explored : 56 states
+ -- CPU user time used : 75 ms
+ -- Virtual memory used : 34376380 KiB
+ -- Resident memory used : 26256 KiB
+
+Verifying formula 3 at query_exp2_learn.q:3
+ -- Formula is satisfied.
+ -- States explored : 0 states
+ -- CPU user time used : 159 ms
+ -- Virtual memory used : 34508480 KiB
+ -- Resident memory used : 30728 KiB
+
+SCENARIO: ZAM_Ramp-1_1-T-1_MAXTIME_15
+
+Options for the verification:
+  Generating no trace
+  Search order is breadth first
+  Using conservative space optimisation
+  Seed is 1716289234
+  State space representation uses minimal constraint systems with future testing
+  Using HashMap + Compress integers for discrete state storage
+
+Verifying formula 1 at query_exp2_learn.q:1
+ -- Formula is satisfied.
+ -- Result: (201 runs)
+Learning statistics for best strategy: 
+	Number of resets: 0
+	Number of iterations in last reset: 1
+	Number of iterations in total: 1
+
+
+ -- States explored : 0 states
+ -- CPU user time used : 18149 ms
+ -- Virtual memory used : 34002616 KiB
+ -- Resident memory used : 20336 KiB
+
+Verifying formula 2 at query_exp2_learn.q:2
+ -- Formula is satisfied.
+ -- States stored : 81 states
+ -- States explored : 81 states
+ -- CPU user time used : 122 ms
+ -- Virtual memory used : 34002620 KiB
+ -- Resident memory used : 24440 KiB
+
+Verifying formula 3 at query_exp2_learn.q:3
+ -- Formula is NOT satisfied.
+ -- States explored : 0 states
+ -- CPU user time used : 260 ms
+ -- Virtual memory used : 34002624 KiB
+ -- Resident memory used : 25104 KiB
+
+SCENARIO: ZAM_Ramp-1_1-T-1_MAXTIME_20
+
+Options for the verification:
+  Generating no trace
+  Search order is breadth first
+  Using conservative space optimisation
+  Seed is 1716289253
+  State space representation uses minimal constraint systems with future testing
+  Using HashMap + Compress integers for discrete state storage
+
+Verifying formula 1 at query_exp2_learn.q:1
+ -- Formula is satisfied.
+ -- Result: (401 runs)
+Learning statistics for best strategy: 
+	Number of resets: 0
+	Number of iterations in last reset: 1
+	Number of iterations in total: 1
+
+
+ -- States explored : 0 states
+ -- CPU user time used : 48404 ms
+ -- Virtual memory used : 34002612 KiB
+ -- Resident memory used : 20516 KiB
+
+Verifying formula 2 at query_exp2_learn.q:2
+ -- Formula is satisfied.
+ -- States stored : 106 states
+ -- States explored : 106 states
+ -- CPU user time used : 170 ms
+ -- Virtual memory used : 34133692 KiB
+ -- Resident memory used : 25228 KiB
+
+Verifying formula 3 at query_exp2_learn.q:3
+ -- Formula is NOT satisfied.
+ -- States explored : 0 states
+ -- CPU user time used : 331 ms
+ -- Virtual memory used : 34133692 KiB
+ -- Resident memory used : 25928 KiB
+
+SCENARIO: ZAM_Ramp-1_1-T-1_MAXTIME_25
+
+Options for the verification:
+  Generating no trace
+  Search order is breadth first
+  Using conservative space optimisation
+  Seed is 1716289303
+  State space representation uses minimal constraint systems with future testing
+  Using HashMap + Compress integers for discrete state storage
+
+Verifying formula 1 at query_exp2_learn.q:1
+ -- Formula is satisfied.
+ -- Result: (601 runs)
+Learning statistics for best strategy: 
+	Number of resets: 0
+	Number of iterations in last reset: 1
+	Number of iterations in total: 1
+
+
+ -- States explored : 0 states
+ -- CPU user time used : 77304 ms
+ -- Virtual memory used : 34276020 KiB
+ -- Resident memory used : 21568 KiB
+
+Verifying formula 2 at query_exp2_learn.q:2
+ -- Formula is satisfied.
+ -- States stored : 131 states
+ -- States explored : 131 states
+ -- CPU user time used : 186 ms
+ -- Virtual memory used : 34276028 KiB
+ -- Resident memory used : 25708 KiB
+
+Verifying formula 3 at query_exp2_learn.q:3
+ -- Formula is NOT satisfied.
+ -- States explored : 0 states
+ -- CPU user time used : 374 ms
+ -- Virtual memory used : 34276028 KiB
+ -- Resident memory used : 26912 KiB
+
+SCENARIO: ZAM_Ramp-1_1-T-1_MAXTIME_30
+
+Options for the verification:
+  Generating no trace
+  Search order is breadth first
+  Using conservative space optimisation
+  Seed is 1716289383
+  State space representation uses minimal constraint systems with future testing
+  Using HashMap + Compress integers for discrete state storage
+
+Verifying formula 1 at query_exp2_learn.q:1
+ -- Formula is satisfied.
+ -- Result: (1001 runs)
+Learning statistics for best strategy: 
+	Number of resets: 0
+	Number of iterations in last reset: 1
+	Number of iterations in total: 1
+
+
+ -- States explored : 0 states
+ -- CPU user time used : 182336 ms
+ -- Virtual memory used : 34397876 KiB
+ -- Resident memory used : 21524 KiB
+
+Verifying formula 2 at query_exp2_learn.q:2
+ -- Formula is satisfied.
+ -- States stored : 156 states
+ -- States explored : 156 states
+ -- CPU user time used : 237 ms
+ -- Virtual memory used : 34528956 KiB
+ -- Resident memory used : 26184 KiB
+
+Verifying formula 3 at query_exp2_learn.q:3
+ -- Formula is satisfied.
+ -- States explored : 0 states
+ -- CPU user time used : 538 ms
+ -- Virtual memory used : 34660028 KiB
+ -- Resident memory used : 30612 KiB
+
+SCENARIO: ZAM_Ramp-1_1-T-1_MAXTIME_15
+
+
+SCENARIO: ZAM_Ramp-1_1-T-1_MAXTIME_20
+
+
+SCENARIO: ZAM_Ramp-1_1-T-1_MAXTIME_25
+
+
+SCENARIO: ZAM_Ramp-1_1-T-1_MAXTIME_15
+
+
+SCENARIO: ZAM_Ramp-1_1-T-1_MAXTIME_20
+
+
+SCENARIO: ZAM_Ramp-1_1-T-1_MAXTIME_25
+
+
+SCENARIO: ZAM_Ramp-1_1-T-1_MAXTIME_20
+
+Options for the verification:
+  Generating no trace
+  Search order is breadth first
+  Using conservative space optimisation
+  Seed is 1716297194
+  State space representation uses minimal constraint systems with future testing
+  Using HashMap + Compress integers for discrete state storage
+
+Verifying formula 1 at query_exp2_learn.q:1
+ -- Formula is satisfied.
+ -- Result: (801 runs)
+Learning statistics for best strategy: 
+	Number of resets: 0
+	Number of iterations in last reset: 1
+	Number of iterations in total: 1
+
+
+ -- States explored : 0 states
+ -- CPU user time used : 91437 ms
+ -- Virtual memory used : 34546360 KiB
+ -- Resident memory used : 20788 KiB
+
+Verifying formula 2 at query_exp2_learn.q:2
+ -- Formula is satisfied.
+ -- States stored : 106 states
+ -- States explored : 106 states
+ -- CPU user time used : 156 ms
+ -- Virtual memory used : 34546364 KiB
+ -- Resident memory used : 18560 KiB
+
+Verifying formula 3 at query_exp2_learn.q:3
+ -- Formula is NOT satisfied.
+ -- States explored : 0 states
+ -- CPU user time used : 312 ms
+ -- Virtual memory used : 34546368 KiB
+ -- Resident memory used : 21272 KiB

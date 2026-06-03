@@ -1,0 +1,228 @@
+const int MAXP = 34;
+const int NONE = -1;
+const int MAXL = 33;
+const int MAXSO = 1;
+const int MAXPRE = 3;
+const int MAXSUC = 2;
+
+typedef int[-1,65535] id_t;
+
+typedef struct {
+    int32_t x;
+    int32_t y;
+}ST_DPOINT;
+
+typedef struct {
+    double x;
+    double y;
+}ST_CPOINT;
+
+typedef struct {
+    ST_DPOINT ends[2];
+}ST_DLINE;
+
+typedef struct {
+    ST_DPOINT points[MAXP];
+    bool dashLine;
+}ST_BOUND;
+
+typedef struct {
+    id_t ID;
+    ST_BOUND left;
+    ST_BOUND right;
+    id_t predecessor[MAXPRE];
+    id_t successor[MAXSUC];
+    id_t adjLeft;
+    bool dirLeft;
+    id_t adjRight;
+    bool dirRight;
+}ST_LANE;
+
+typedef struct {
+    bool collide; // collision
+    bool outside; // outside road
+    bool reach;   // reach the goal
+}ST_DETECTION;
+
+typedef struct {
+    ST_CPOINT position;
+    double velocity;
+    double orientation;
+    double acceleration;
+    double yawRate;
+}ST_CSTATE;
+
+typedef struct {
+    ST_DPOINT position;
+    int16_t velocity;
+    int16_t orientation;
+    int16_t acceleration;
+    int16_t yawRate;
+    ST_DETECTION detection;
+}ST_DSTATE;
+
+typedef struct {
+    hybrid clock x;
+    hybrid clock y;
+    hybrid clock velocity;
+    hybrid clock orientation;
+    hybrid clock acceleration;
+    hybrid clock yawRate;
+}ST_VARIABLES;
+
+typedef struct {
+    ST_DPOINT center;
+    int16_t width;
+    int16_t length;
+    int16_t orientation;
+}ST_RECTANGLE;
+
+typedef struct {
+    int maxVelocity;
+    int minVelocity;
+    int maxOrientation;
+    int minOrientation;
+}ST_RULES;
+
+typedef struct {
+    ST_DPOINT goal;
+}ST_PLANNING;
+const ST_BOUND leftLane1 = {{{-33, 9328}, {-295, 8383}, {-557, 7438}, {-819, 6492}, {-1081, 5547}, {-1343, 4602}, {-1605, 3657}, {-1867, 2712}, {-2129, 1767}, {-2393, 814}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane1 = {{{-323, 9408}, {-585, 8463}, {-847, 7518}, {-1109, 6573}, {-1371, 5628}, {-1632, 4682}, {-1894, 3737}, {-2156, 2792}, {-2418, 1847}, {-2682, 894}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane1 = {490, leftLane1, rightLane1, {NONE, NONE, NONE}, {488, NONE}, 494, true, NONE, false};
+
+const ST_BOUND leftLane2 = {{{255, 9248}, {-6, 8303}, {-267, 7358}, {-529, 6413}, {-791, 5468}, {-1053, 4522}, {-1315, 3577}, {-1577, 2632}, {-1839, 1687}, {-2103, 734}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane2 = {{{-33, 9328}, {-295, 8383}, {-557, 7438}, {-819, 6493}, {-1081, 5548}, {-1343, 4603}, {-1605, 3658}, {-1867, 2712}, {-2128, 1767}, {-2393, 814}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane2 = {494, leftLane2, rightLane2, {NONE, NONE, NONE}, {496, NONE}, 500, true, 490, true};
+
+const ST_BOUND leftLane3 = {{{545, 9168}, {283, 8223}, {21, 7278}, {-240, 6333}, {-502, 5388}, {-763, 4443}, {-1025, 3498}, {-1287, 2552}, {-1549, 1607}, {-1813, 654}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane3 = {{{255, 9248}, {-5, 8303}, {-267, 7358}, {-529, 6413}, {-791, 5468}, {-1053, 4523}, {-1315, 3578}, {-1577, 2633}, {-1839, 1687}, {-2103, 734}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane3 = {500, leftLane3, rightLane3, {NONE, NONE, NONE}, {502, NONE}, NONE, false, 494, true};
+
+const ST_BOUND leftLane4 = {{{-2263, 156}, {-2516, -754}, {-2777, -1699}, {-3039, -2644}, {-3301, -3589}, {-3563, -4535}, {-3825, -5480}, {-4087, -6425}, {-4349, -7370}, {-4611, -8315}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane4 = {{{-2553, 236}, {-2805, -674}, {-3067, -1619}, {-3329, -2564}, {-3591, -3509}, {-3853, -4454}, {-4115, -5400}, {-4377, -6345}, {-4638, -7290}, {-4900, -8235}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane4 = {498, leftLane4, rightLane4, {496, 3577, NONE}, {NONE, NONE}, 504, true, NONE, false};
+
+const ST_BOUND leftLane5 = {{{-1974, 77}, {-2226, -834}, {-2488, -1779}, {-2750, -2724}, {-3011, -3669}, {-3273, -4614}, {-3535, -5560}, {-3797, -6505}, {-4059, -7450}, {-4321, -8395}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane5 = {{{-2263, 156}, {-2515, -754}, {-2777, -1699}, {-3039, -2644}, {-3301, -3589}, {-3563, -4534}, {-3825, -5479}, {-4087, -6424}, {-4349, -7370}, {-4611, -8315}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane5 = {504, leftLane5, rightLane5, {502, 3666, 5405}, {NONE, NONE}, 510, false, 498, true};
+
+const ST_BOUND leftLane6 = {{{-4321, -8395}, {-4059, -7450}, {-3797, -6505}, {-3535, -5560}, {-3273, -4614}, {-3011, -3669}, {-2750, -2724}, {-2488, -1779}, {-2226, -834}, {-1974, 77}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane6 = {{{-4031, -8475}, {-3770, -7530}, {-3508, -6585}, {-3246, -5640}, {-2984, -4695}, {-2722, -3749}, {-2460, -2804}, {-2198, -1859}, {-1936, -914}, {-1684, -2}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane6 = {510, leftLane6, rightLane6, {NONE, NONE, NONE}, {508, NONE}, 504, false, 996, true};
+
+const ST_BOUND leftLane7 = {{{-4031, -8475}, {-3769, -7530}, {-3507, -6584}, {-3246, -5639}, {-2984, -4694}, {-2722, -3749}, {-2460, -2804}, {-2198, -1859}, {-1936, -914}, {-1684, -2}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane7 = {{{-3742, -8554}, {-3480, -7610}, {-3218, -6665}, {-2956, -5720}, {-2694, -4774}, {-2432, -3829}, {-2170, -2884}, {-1908, -1939}, {-1646, -994}, {-1394, -82}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane7 = {996, leftLane7, rightLane7, {NONE, NONE, NONE}, {1013, NONE}, 510, true, 1088, true};
+
+const ST_BOUND leftLane8 = {{{-3742, -8554}, {-3480, -7609}, {-3218, -6664}, {-2956, -5719}, {-2694, -4774}, {-2432, -3829}, {-2170, -2884}, {-1908, -1938}, {-1646, -993}, {-1394, -82}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane8 = {{{-3452, -8634}, {-3190, -7690}, {-2928, -6744}, {-2666, -5799}, {-2404, -4854}, {-2142, -3909}, {-1881, -2964}, {-1619, -2019}, {-1357, -1074}, {-1104, -162}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane8 = {1088, leftLane8, rightLane8, {NONE, NONE, NONE}, {1159, 2779}, 996, true, NONE, false};
+
+const ST_BOUND leftLane9 = {{{-1523, 574}, {-1259, 1527}, {-997, 2473}, {-736, 3418}, {-474, 4363}, {-212, 5308}, {49, 6253}, {311, 7198}, {573, 8143}, {835, 9089}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane9 = {{{-1234, 495}, {-970, 1447}, {-708, 2392}, {-446, 3338}, {-184, 4283}, {77, 5228}, {339, 6173}, {601, 7118}, {862, 8063}, {1124, 9009}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane9 = {1100, leftLane9, rightLane9, {1013, NONE, NONE}, {NONE, NONE}, NONE, false, 1105, true};
+
+const ST_BOUND leftLane10 = {{{-1234, 495}, {-970, 1448}, {-708, 2393}, {-446, 3338}, {-184, 4283}, {77, 5228}, {339, 6173}, {601, 7119}, {863, 8064}, {1124, 9009}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane10 = {{{-944, 415}, {-680, 1368}, {-418, 2313}, {-156, 3258}, {105, 4203}, {367, 5148}, {628, 6093}, {890, 7038}, {1152, 7983}, {1414, 8929}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane10 = {1105, leftLane10, rightLane10, {1159, 2897, NONE}, {NONE, NONE}, 1100, true, NONE, false};
+
+const ST_BOUND leftLane11 = {{{-1024, 126}, {-40, -144}, {960, -419}, {1961, -695}, {2963, -971}, {3964, -1246}, {4966, -1522}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane11 = {{{-1104, -162}, {-120, -433}, {881, -708}, {1882, -984}, {2883, -1260}, {3885, -1535}, {4886, -1811}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane11 = {1172, leftLane11, rightLane11, {2779, 3622, NONE}, {NONE, NONE}, 1178, false, NONE, false};
+
+const ST_BOUND leftLane12 = {{{4966, -1522}, {3965, -1247}, {2964, -971}, {1962, -695}, {961, -420}, {-39, -144}, {-1024, 126}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane12 = {{{5046, -1233}, {4045, -957}, {3043, -682}, {2042, -406}, {1041, -131}, {39, 144}, {-944, 415}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane12 = {1178, leftLane12, rightLane12, {NONE, NONE, NONE}, {2897, 2907}, 1172, false, NONE, false};
+
+const ST_BOUND leftLane13 = {{{-2762, 605}, {-4007, 947}, {-5008, 1223}, {-6009, 1498}, {-7011, 1774}, {-8012, 2050}, {-9014, 2325}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane13 = {{{-2683, 894}, {-3927, 1236}, {-4928, 1512}, {-5930, 1787}, {-6931, 2063}, {-7932, 2339}, {-8934, 2614}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane13 = {492, leftLane13, rightLane13, {488, 3639, NONE}, {NONE, NONE}, 3286, false, NONE, false};
+
+const ST_BOUND leftLane14 = {{{-9014, 2325}, {-8013, 2050}, {-7012, 1774}, {-6010, 1499}, {-5009, 1223}, {-4008, 947}, {-2762, 605}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane14 = {{{-9094, 2036}, {-8092, 1761}, {-7091, 1485}, {-6090, 1210}, {-5089, 934}, {-4087, 658}, {-2842, 316}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane14 = {3286, leftLane14, rightLane14, {NONE, NONE, NONE}, {3292, NONE}, 492, false, NONE, false};
+
+const ST_BOUND leftLane15 = {{{-2393, 814}, {-2400, 791}, {-2409, 770}, {-2419, 749}, {-2432, 729}, {-2446, 709}, {-2461, 692}, {-2477, 675}, {-2495, 660}, {-2514, 646}, {-2534, 633}, {-2555, 623}, {-2577, 613}, {-2599, 606}, {-2622, 600}, {-2645, 597}, {-2669, 595}, {-2692, 594}, {-2716, 596}, {-2739, 599}, {-2762, 605}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane15 = {{{-2682, 894}, {-2683, 894}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane15 = {488, leftLane15, rightLane15, {490, NONE, NONE}, {492, NONE}, NONE, false, NONE, false};
+
+const ST_BOUND leftLane16 = {{{-2103, 734}, {-2183, 445}, {-2263, 156}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane16 = {{{-2393, 814}, {-2473, 525}, {-2553, 236}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane16 = {496, leftLane16, rightLane16, {494, NONE, NONE}, {498, NONE}, 502, true, NONE, false};
+
+const ST_BOUND leftLane17 = {{{-1813, 654}, {-1893, 365}, {-1974, 77}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane17 = {{{-2103, 734}, {-2183, 446}, {-2263, 156}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane17 = {502, leftLane17, rightLane17, {500, NONE, NONE}, {504, NONE}, NONE, false, 496, true};
+
+const ST_BOUND leftLane18 = {{{-2183, 445}, {-2473, 525}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane18 = {{{-2103, 734}, {-2393, 814}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane18 = {506, leftLane18, rightLane18, {508, 2931, NONE}, {3639, NONE}, 3641, false, NONE, false};
+
+const ST_BOUND leftLane19 = {{{-2473, 525}, {-2762, 605}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane19 = {{{-2393, 814}, {-2683, 894}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane19 = {3639, leftLane19, rightLane19, {506, NONE, NONE}, {492, NONE}, 3292, false, NONE, false};
+
+const ST_BOUND leftLane20 = {{{-1974, 77}, {-1971, 107}, {-1971, 150}, {-1976, 192}, {-1980, 213}, {-1987, 235}, {-1994, 256}, {-2014, 297}, {-2039, 335}, {-2069, 370}, {-2104, 400}, {-2142, 425}, {-2183, 445}, {-2183, 445}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane20 = {{{-1684, -2}, {-1676, 81}, {-1680, 163}, {-1693, 244}, {-1703, 284}, {-1716, 323}, {-1730, 361}, {-1766, 435}, {-1805, 496}, {-1854, 557}, {-1910, 613}, {-1972, 663}, {-2059, 716}, {-2103, 734}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane20 = {508, leftLane20, rightLane20, {510, NONE, NONE}, {506, NONE}, 5405, false, NONE, false};
+
+const ST_BOUND leftLane21 = {{{-1684, -2}, {-1604, 286}, {-1523, 574}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane21 = {{{-1394, -82}, {-1314, 205}, {-1234, 495}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane21 = {1013, leftLane21, rightLane21, {504, NONE, NONE}, {1100, NONE}, NONE, false, 1159, true};
+
+const ST_BOUND leftLane22 = {{{-1394, -82}, {-1314, 206}, {-1234, 495}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane22 = {{{-1104, -162}, {-1024, 126}, {-944, 415}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane22 = {1159, leftLane22, rightLane22, {1088, NONE, NONE}, {1105, NONE}, 1013, true, NONE, false};
+
+const ST_BOUND leftLane23 = {{{-1394, -82}, {-1387, -66}, {-1381, -54}, {-1375, -42}, {-1368, -30}, {-1361, -18}, {-1353, -7}, {-1345, 3}, {-1337, 14}, {-1328, 24}, {-1318, 34}, {-1308, 44}, {-1298, 53}, {-1287, 61}, {-1276, 70}, {-1265, 77}, {-1253, 85}, {-1241, 91}, {-1229, 98}, {-1217, 103}, {-1204, 109}, {-1191, 113}, {-1178, 117}, {-1165, 121}, {-1151, 124}, {-1138, 127}, {-1124, 128}, {-1111, 130}, {-1097, 131}, {-1083, 131}, {-1069, 131}, {-1056, 130}, {-1042, 128}, {-1024, 126}}, false};
+const ST_BOUND rightLane23 = {{{-1104, -162}, {-1104, -162}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane23 = {2779, leftLane23, rightLane23, {1088, NONE, NONE}, {1172, NONE}, NONE, false, NONE, false};
+
+const ST_BOUND leftLane24 = {{{-1024, 126}, {-1041, 132}, {-1054, 137}, {-1068, 142}, {-1081, 148}, {-1094, 155}, {-1106, 163}, {-1118, 171}, {-1130, 179}, {-1141, 189}, {-1152, 198}, {-1162, 209}, {-1172, 219}, {-1181, 230}, {-1190, 242}, {-1198, 254}, {-1205, 266}, {-1212, 279}, {-1218, 292}, {-1224, 306}, {-1229, 319}, {-1233, 333}, {-1237, 347}, {-1240, 361}, {-1242, 376}, {-1244, 390}, {-1244, 404}, {-1245, 419}, {-1244, 433}, {-1243, 448}, {-1241, 462}, {-1238, 476}, {-1234, 495}, {NONE, NONE}}, false};
+const ST_BOUND rightLane24 = {{{-944, 415}, {-944, 415}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane24 = {2897, leftLane24, rightLane24, {1178, NONE, NONE}, {1105, NONE}, NONE, false, NONE, false};
+
+const ST_BOUND leftLane25 = {{{-1024, 126}, {-1313, 206}, {-1604, 286}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane25 = {{{-944, 415}, {-1234, 495}, {-1523, 574}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane25 = {2907, leftLane25, rightLane25, {1178, NONE, NONE}, {2931, 3666}, 3622, false, NONE, false};
+
+const ST_BOUND leftLane26 = {{{-1604, 286}, {-1893, 365}, {-2183, 445}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane26 = {{{-1523, 574}, {-1813, 654}, {-2103, 734}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane26 = {2931, leftLane26, rightLane26, {2907, NONE, NONE}, {506, NONE}, 3483, false, NONE, false};
+
+const ST_BOUND leftLane27 = {{{-1604, 286}, {-1631, 293}, {-1648, 297}, {-1657, 298}, {-1684, 301}, {-1710, 301}, {-1737, 299}, {-1763, 294}, {-1785, 288}, {-1789, 287}, {-1792, 285}, {-1813, 277}, {-1831, 268}, {-1837, 265}, {-1860, 251}, {-1872, 241}, {-1881, 235}, {-1900, 216}, {-1918, 197}, {-1933, 175}, {-1947, 152}, {-1956, 132}, {-1958, 128}, {-1967, 103}, {-1974, 77}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane27 = {{{-1523, 574}, {-1556, 582}, {-1600, 588}, {-1625, 591}, {-1659, 593}, {-1728, 590}, {-1763, 586}, {-1830, 572}, {-1864, 563}, {-1884, 555}, {-1896, 551}, {-1928, 538}, {-1959, 522}, {-1976, 513}, {-2018, 487}, {-2046, 467}, {-2059, 457}, {-2091, 429}, {-2133, 387}, {-2160, 354}, {-2194, 306}, {-2216, 269}, {-2222, 257}, {-2241, 216}, {-2263, 156}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane27 = {3666, leftLane27, rightLane27, {2907, NONE, NONE}, {504, NONE}, NONE, false, NONE, false};
+
+const ST_BOUND leftLane28 = {{{-2762, 605}, {-2473, 525}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane28 = {{{-2842, 316}, {-2553, 236}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane28 = {3292, leftLane28, rightLane28, {3286, NONE, NONE}, {3641, 3577}, 3639, false, NONE, false};
+
+const ST_BOUND leftLane29 = {{{-2473, 525}, {-2183, 445}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane29 = {{{-2553, 236}, {-2263, 156}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane29 = {3641, leftLane29, rightLane29, {3292, NONE, NONE}, {3483, 5405}, 506, false, NONE, false};
+
+const ST_BOUND leftLane30 = {{{-2473, 525}, {-2454, 518}, {-2437, 511}, {-2420, 502}, {-2404, 493}, {-2389, 483}, {-2374, 472}, {-2360, 460}, {-2347, 447}, {-2334, 434}, {-2322, 419}, {-2311, 405}, {-2301, 389}, {-2292, 373}, {-2284, 357}, {-2277, 340}, {-2271, 322}, {-2265, 305}, {-2261, 287}, {-2258, 268}, {-2256, 250}, {-2255, 232}, {-2256, 213}, {-2257, 195}, {-2259, 176}, {-2263, 156}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane30 = {{{-2553, 236}, {-2553, 236}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane30 = {3577, leftLane30, rightLane30, {3292, NONE, NONE}, {498, NONE}, NONE, false, NONE, false};
+
+const ST_BOUND leftLane31 = {{{-2183, 445}, {-1895, 366}, {-1893, 365}, {-1604, 286}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane31 = {{{-2263, 156}, {-1974, 77}, {-1973, 76}, {-1684, -2}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane31 = {3483, leftLane31, rightLane31, {3641, NONE, NONE}, {3622, NONE}, 2931, false, NONE, false};
+
+const ST_BOUND leftLane32 = {{{-1604, 286}, {-1314, 206}, {-1024, 126}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane32 = {{{-1684, -2}, {-1394, -82}, {-1104, -162}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane32 = {3622, leftLane32, rightLane32, {3483, NONE, NONE}, {1172, NONE}, 2907, false, NONE, false};
+
+const ST_BOUND leftLane33 = {{{-2183, 445}, {-2142, 425}, {-2104, 400}, {-2069, 370}, {-2039, 335}, {-2014, 297}, {-1994, 256}, {-1980, 213}, {-1972, 168}, {-1970, 122}, {-1974, 77}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_BOUND rightLane33 = {{{-2263, 156}, {-2263, 156}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}, {NONE, NONE}}, false};
+const ST_LANE lane33 = {5405, leftLane33, rightLane33, {3641, NONE, NONE}, {504, NONE}, 508, false, NONE, false};
+
+const ST_LANE laneNet[MAXL] = {lane1, lane2, lane3, lane4, lane5, lane6, lane7, lane8, lane9, lane10, lane11, lane12, lane13, lane14, lane15, lane16, lane17, lane18, lane19, lane20, lane21, lane22, lane23, lane24, lane25, lane26, lane27, lane28, lane29, lane30, lane31, lane32, lane33};
+
+const bool staticObsExists = false;
+const ST_RECTANGLE staticObs[MAXSO] = {{{NONE, NONE}, NONE, NONE, NONE}};
+
+const ST_PLANNING planning = {{-3292, -4119}};
+

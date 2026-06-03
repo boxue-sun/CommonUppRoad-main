@@ -1,0 +1,8 @@
+/collision_detect/*.exe
+.vscode/
+__pycache__/
+*.pyc
+.DS_Store
+.claude/
+*.dSYM/
+experiments/animation/temp_figs/

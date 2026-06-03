@@ -1,0 +1,108 @@
+const int MAXP = 2;
+const int NONE = -1;
+const int MAXL = 3;
+const int MAXSO = 1;
+const int MAXPRE = 1;
+const int MAXSUC = 1;
+
+typedef int[-1,65535] id_t;
+
+typedef struct {
+    int32_t x;
+    int32_t y;
+}ST_DPOINT;
+
+typedef struct {
+    double x;
+    double y;
+}ST_CPOINT;
+
+typedef struct {
+    ST_DPOINT ends[2];
+}ST_DLINE;
+
+typedef struct {
+    ST_DPOINT points[MAXP];
+    bool dashLine;
+}ST_BOUND;
+
+typedef struct {
+    id_t ID;
+    ST_BOUND left;
+    ST_BOUND right;
+    id_t predecessor[MAXPRE];
+    id_t successor[MAXSUC];
+    id_t adjLeft;
+    bool dirLeft;
+    id_t adjRight;
+    bool dirRight;
+}ST_LANE;
+
+typedef struct {
+    bool collide; // collision
+    bool outside; // outside road
+    bool reach;   // reach the goal
+}ST_DETECTION;
+
+typedef struct {
+    ST_CPOINT position;
+    double velocity;
+    double orientation;
+    double acceleration;
+    double yawRate;
+}ST_CSTATE;
+
+typedef struct {
+    ST_DPOINT position;
+    int16_t velocity;
+    int16_t orientation;
+    int16_t acceleration;
+    int16_t yawRate;
+    ST_DETECTION detection;
+}ST_DSTATE;
+
+typedef struct {
+    hybrid clock x;
+    hybrid clock y;
+    hybrid clock velocity;
+    hybrid clock orientation;
+    hybrid clock acceleration;
+    hybrid clock yawRate;
+}ST_VARIABLES;
+
+typedef struct {
+    ST_DPOINT center;
+    int16_t width;
+    int16_t length;
+    int16_t orientation;
+}ST_RECTANGLE;
+
+typedef struct {
+    int maxVelocity;
+    int minVelocity;
+    int maxOrientation;
+    int minOrientation;
+}ST_RULES;
+
+typedef struct {
+    ST_DPOINT goal;
+}ST_PLANNING;
+const ST_BOUND leftLane1 = {{{0, 175}, {19900, 175}}, false};
+const ST_BOUND rightLane1 = {{{0, -175}, {19900, -175}}, false};
+const ST_LANE lane1 = {1, leftLane1, rightLane1, {NONE}, {NONE}, 2, false, NONE, false};
+
+const ST_BOUND leftLane2 = {{{0, 525}, {19900, 525}}, false};
+const ST_BOUND rightLane2 = {{{0, 175}, {19900, 175}}, false};
+const ST_LANE lane2 = {2, leftLane2, rightLane2, {NONE}, {NONE}, 3, true, 1, false};
+
+const ST_BOUND leftLane3 = {{{0, 875}, {19900, 875}}, false};
+const ST_BOUND rightLane3 = {{{0, 525}, {19900, 525}}, false};
+const ST_LANE lane3 = {3, leftLane3, rightLane3, {NONE}, {NONE}, NONE, false, 2, true};
+
+const ST_LANE laneNet[MAXL] = {lane1, lane2, lane3};
+
+const bool staticObsExists = true;
+const ST_RECTANGLE staticObs[MAXSO] = {{{3000, 350}, 200, 450, 2}};
+
+const ST_PLANNING planning = {{9950, 0}};
+

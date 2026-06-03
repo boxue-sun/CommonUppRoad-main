@@ -1,0 +1,1094 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>// Generated scenario starts
+const int P = 1;
+const uint8_t MAXTIME = 10;
+const int MAXP = 2;
+const int NONE = -1;
+const int MAXL = 3;
+const int MAXSO = 1;
+const int MAXDO = 2;
+const int MAXTP = 40;
+const int MAXPRE = 1;
+const int MAXSUC = 1;
+const double SCALE = 100.0;
+const int THRESHOLD = 200;
+const double TIMESTEPSIZE = 0.1;
+
+typedef int[-1,65535] id_t;
+
+typedef struct {
+    int32_t x;
+    int32_t y;
+}ST_DPOINT;
+
+typedef struct {
+    double x;
+    double y;
+}ST_CPOINT;
+
+typedef struct {
+    ST_DPOINT ends[2];
+}ST_DLINE;
+
+typedef struct {
+    ST_DPOINT points[MAXP];
+    bool dashLine;
+}ST_BOUND;
+
+typedef struct {
+    id_t ID;
+    ST_BOUND left;
+    ST_BOUND right;
+    id_t predecessor[MAXPRE];
+    id_t successor[MAXSUC];
+    id_t adjLeft;
+    bool dirLeft;
+    id_t adjRight;
+    bool dirRight;
+}ST_LANE;
+
+typedef struct {
+    bool collide; // collision
+    bool outside; // outside road
+    bool reach;   // reach the goal
+}ST_DETECTION;
+
+typedef struct {
+    ST_CPOINT position;
+    double velocity;
+    double orientation;
+    double acceleration;
+    double yawRate;
+}ST_CSTATE;
+
+typedef struct {
+    ST_DPOINT position;
+    int16_t velocity;
+    int16_t orientation;
+    int16_t acceleration;
+    int16_t yawRate;
+    ST_DETECTION detection;
+}ST_DSTATE;
+
+typedef struct {
+    hybrid clock x;
+    hybrid clock y;
+    hybrid clock velocity;
+    hybrid clock orientation;
+    hybrid clock acceleration;
+    hybrid clock yawRate;
+}ST_VARIABLES;
+
+typedef struct {
+    ST_DPOINT center;
+    int16_t width;
+    int16_t length;
+    int16_t orientation;
+}ST_RECTANGLE;
+
+typedef struct {
+    int maxVelocity;
+    int minVelocity;
+    int maxOrientation;
+    int minOrientation;
+}ST_RULES;
+
+typedef struct {
+    ST_DPOINT goal;
+}ST_PLANNING;
+
+typedef struct {
+    int32_t time;
+    ST_CSTATE cState;
+}ST_PAIR;
+const ST_BOUND leftLane1 = {{{0, 175}, {19900, 175}}, false};
+const ST_BOUND rightLane1 = {{{0, -175}, {19900, -175}}, false};
+const ST_LANE lane1 = {1, leftLane1, rightLane1, {NONE}, {NONE}, 2, false, NONE, false};
+
+const ST_BOUND leftLane2 = {{{0, 525}, {19900, 525}}, false};
+const ST_BOUND rightLane2 = {{{0, 175}, {19900, 175}}, false};
+const ST_LANE lane2 = {2, leftLane2, rightLane2, {NONE}, {NONE}, 3, true, 1, false};
+
+const ST_BOUND leftLane3 = {{{0, 875}, {19900, 875}}, false};
+const ST_BOUND rightLane3 = {{{0, 525}, {19900, 525}}, false};
+const ST_LANE lane3 = {3, leftLane3, rightLane3, {NONE}, {NONE}, NONE, false, 2, true};
+
+const ST_LANE laneNet[MAXL] = {lane1, lane2, lane3};
+
+const bool staticObsExists = true;
+const ST_RECTANGLE staticObs[MAXSO] = {{{3000, 350}, 200, 450, 2}};
+
+const ST_PLANNING planning = {{3000, 0}};
+
+
+// Generated scenario ends
+
+broadcast chan chooseEgo, chooseObs, begin, update;
+
+ST_DSTATE dStateEgo;       // discrete variables
+ST_VARIABLES varsEgo;      // continuous variables
+ST_RECTANGLE shapeEgo;     // shape of ego vehicle
+hybrid clock D;            /// "cost" of distance used in strategy optimization
+clock time;                // global time
+
+double i2d(const int32_t i) {
+    double v = i/SCALE;
+    return v;
+}
+
+int32_t d2i(const double i) {
+    int32_t v = fint(i*SCALE);
+    return v;
+}
+
+double mTimeStep(const double value) {
+    return value*TIMESTEPSIZE;
+}
+
+int getDisP2P(const ST_DPOINT &amp;p1, const ST_DPOINT &amp;p2) {
+    double distance = 0.0;
+    double rx1 = i2d(p1.x), ry1 = i2d(p1.y);
+    double rx2 = i2d(p2.x), ry2 = i2d(p2.y);
+    distance = sqrt(pow(rx1 - rx2, 2) + pow(ry1 - ry2, 2));
+
+    return d2i(distance);
+}
+
+// Function to calculate the corner points of a rectangle
+void calculateCornerPoints(ST_RECTANGLE veh_state, ST_DPOINT &amp;corners[4]) {
+    double halfLength = i2d(veh_state.length)/2.0;
+    double halfWidth = i2d(veh_state.width)/2.0;
+    double angle = i2d(veh_state.orientation);
+
+    // Calculate the coordinates of each corner point based on the center, length, width, and orientation
+    corners[0].x = d2i(i2d(veh_state.center.x) + halfLength*cos(angle) - halfWidth*sin(angle));
+    corners[0].y = d2i(i2d(veh_state.center.y) + halfLength*sin(angle) + halfWidth*cos(angle));
+
+    corners[1].x = d2i(i2d(veh_state.center.x) + halfLength*cos(angle) + halfWidth*sin(angle));
+    corners[1].y = d2i(i2d(veh_state.center.y) + halfLength*sin(angle) - halfWidth*cos(angle));
+
+    corners[2].x = d2i(i2d(veh_state.center.x) - halfLength*cos(angle) + halfWidth*sin(angle));
+    corners[2].y = d2i(i2d(veh_state.center.y) - halfLength*sin(angle) - halfWidth*cos(angle));
+
+    corners[3].x = d2i(i2d(veh_state.center.x) - halfLength*cos(angle) - halfWidth*sin(angle));
+    corners[3].y = d2i(i2d(veh_state.center.y) - halfLength*sin(angle) + halfWidth*cos(angle));
+}
+
+// Function to check if all elements in the vector (size=4) have the same sign
+bool same_sign(int32_t vec[4]) {
+    int i = 0;
+    int sign = (vec[0] &gt;= 0) ? 1 : -1; // Get the sign of the first element
+    for (i = 1; i &lt; 4; i++) {
+        if ((vec[i] &gt;= 0) != (sign &gt;= 0)) {
+            return false; // Different signs found
+        }
+    }
+    return true; // All elements have the same sign
+}
+
+// check if pt1 is on the same line defined by pt2-pt3
+bool check_online(ST_DPOINT pt1, ST_DPOINT pt2, ST_DPOINT pt3) {
+    double dis12, dis13, dis23;
+
+    dis12 = sqrt(pow(pt1.x - pt2.x, 2) + pow(pt1.y - pt2.y, 2));
+    dis13 = sqrt(pow(pt1.x - pt3.x, 2) + pow(pt1.y - pt3.y, 2));
+    dis23 = sqrt(pow(pt2.x - pt3.x, 2) + pow(pt2.y - pt3.y, 2));
+    if (dis12 + dis13 == dis23)
+        return true;
+    else
+        return false; 
+}
+
+// Check if any corner of box2 is outside box1
+int check_coverage(ST_DPOINT box1[4], ST_DPOINT box2[4]) {
+    int i = 0, j = 0;
+    int32_t abx = 0, aby = 0, apx = 0, apy = 0;
+    int32_t cross_prod[4];
+    int inside_sum = 0;
+    int is_online = 0;
+    // Check if all corners of box2 fall outside the bounding box of box1   
+    for (i = 0; i &lt; 4; i++) {
+        // get the x y coordinate of the test points
+        for (j = 0; j &lt; 4; j++) {
+            abx = box1[(j+1)%4].x - box1[j].x; // when j+1=4, back to the first one
+            aby = box1[(j+1)%4].y - box1[j].y;
+            apx = box2[i].x - box1[j].x;
+            apy = box2[i].y - box1[j].y;
+            // cross product of ab and ap
+            cross_prod[j] = abx*apy - apx*aby;
+            // check if on the line
+            if (check_online(box2[i], box1[j], box1[(j+1)%4]) == 1)
+                is_online = 1;
+        }
+        // if all the cross production have the same sign, then the test point is within the box1
+        if (same_sign(cross_prod) || is_online == 1)
+            inside_sum++;
+    }
+    return inside_sum;
+}
+
+// Function to count non-zero elements in a 2D array
+int check_pts_num(ST_DPOINT lane_pts[MAXP]) {
+    uint16_t count = 0;
+    // NONE or 0?
+    while (count &lt; MAXP &amp;&amp; (lane_pts[count].x != NONE || lane_pts[count].y != NONE)){
+        count++;
+    }
+    return count;
+}
+
+// check if veh_state are not covered by laneNet, or if vehicle rectangle touches laneNet
+// can this function call check_inlane_lane_single?
+bool check_inlane_laneNet(ST_RECTANGLE veh_state, int &amp;lane, ST_DPOINT &amp;veh_corners[4], ST_DPOINT &amp;box_corners[4]) {
+    uint8_t i_lane = 0;
+    uint8_t num_box = 0;
+    uint8_t i_box = 0;
+    uint8_t inlane_pts_num = 0;
+    //ST_DPOINT veh_corners[4];
+    //ST_DPOINT box_corners[4];
+
+    // Calculate the corner points
+    calculateCornerPoints(veh_state, veh_corners);
+    for(i_lane = 0; i_lane &lt; MAXL; i_lane++){
+        // check the number of points in each lane
+        num_box = check_pts_num(laneNet[i_lane].left.points) - 1;
+        for (i_box = 0; i_box &lt; num_box; i_box++){
+            // define the corner of the road box
+            box_corners[0] = laneNet[i_lane].right.points[i_box];
+            box_corners[1] = laneNet[i_lane].right.points[i_box + 1];
+            box_corners[2] = laneNet[i_lane].left.points[i_box + 1];
+            box_corners[3] = laneNet[i_lane].left.points[i_box];
+            // check if the inlane status of the vehicle box to the current box
+            inlane_pts_num += check_coverage(box_corners, veh_corners);    
+        }
+    }
+    if(inlane_pts_num &lt; 4) {
+        return false;
+    }
+    else {
+        return true;
+    }
+}
+
+// check if veh_state are not covered by a single lane, or if vehicle rectangle touches the edge of the lane
+bool check_inlane_lane_single(const ST_LANE lane, ST_RECTANGLE veh_state, ST_DPOINT &amp;veh_corners[4], ST_DPOINT &amp;box_corners[4]) {
+    uint8_t num_box = 0;
+    uint8_t i_box = 0;
+    uint8_t inlane_pts_num = 0;
+
+    //ST_DPOINT veh_corners[4];
+    //ST_DPOINT box_corners[4];
+    // Calculate the corner points
+    calculateCornerPoints(veh_state, veh_corners);
+
+    // check the number of points in the lane
+    num_box = check_pts_num(lane.left.points) - 1;
+    for (i_box = 0; i_box &lt; num_box; i_box++){
+        // define the corner of the road box
+        box_corners[0] = lane.right.points[i_box];
+        box_corners[1] = lane.right.points[i_box + 1];
+        box_corners[2] = lane.left.points[i_box + 1];
+        box_corners[3] = lane.left.points[i_box];
+        // check if the inlane status of the vehicle box to the current box
+        inlane_pts_num += check_coverage(box_corners, veh_corners);         
+    }
+    
+    if(inlane_pts_num &lt; 4) {
+        return false;
+    }
+    else {
+        return true;
+    }
+}
+
+int32_t compute_approximating_circle_radius(int ego_length, int ego_width) {
+    double length = i2d(ego_length);
+    double width = i2d(ego_width);
+    double square_length, diagonal_square, approx_radius;
+
+    if (length &lt;= 0 || width &lt;= 0) {
+        return -1;
+    }
+
+    if (fabs(length) &lt; 1e-6 &amp;&amp; fabs(width) &lt; 1e-6) {
+        return 0;
+    }
+    // Divide rectangle into 3 smaller rectangles
+    square_length = length/3.0;
+    // Calculate minimum radius
+    diagonal_square = sqrt(pow(square_length/2.0, 2) + pow(width/2.0, 2));
+    // Round up value
+    approx_radius = round(diagonal_square*10.0) / 10.0 + 0.1;
+
+    return d2i(approx_radius);
+}
+
+void compute_centers_of_approximation_circles(ST_RECTANGLE veh_rect, ST_DPOINT &amp;centers[2]) {
+    double disc_radius, distance_centers, veh_cent_x_double, veh_cent_y_double;
+
+    disc_radius = i2d(compute_approximating_circle_radius(veh_rect.length, veh_rect.width));
+    distance_centers = disc_radius/2.0;
+
+    // Compute the center position of first circle (front)
+    veh_cent_x_double = i2d(veh_rect.center.x);
+    veh_cent_y_double = i2d(veh_rect.center.y);
+    centers[0].x = d2i(veh_cent_x_double + (distance_centers/2.0)*cos(i2d(veh_rect.orientation)));
+    centers[0].y = d2i(veh_cent_y_double + (distance_centers/2.0)*sin(i2d(veh_rect.orientation)));
+
+    // Compute the center position of second circle (rear)
+    centers[1].x = d2i(veh_cent_x_double - (distance_centers/2.0)*cos(i2d(veh_rect.orientation)));
+    centers[1].y = d2i(veh_cent_y_double - (distance_centers/2.0)*sin(i2d(veh_rect.orientation)));
+}
+
+
+
+bool check_collision(ST_RECTANGLE veh_st_rect1, ST_RECTANGLE veh_st_rect2, int dis_thres) {    
+    // define two vehicles' circle tuple (front and rear)
+    ST_DPOINT veh_circle_tuple1[2] = {{0, 0}, {0, 0}};
+    ST_DPOINT veh_circle_tuple2[2] = {{0, 0}, {0, 0}};
+    double min_dis = FLT_MAX, dis = 0;
+    int i, j;    
+    //int32_t temp[2][2];
+    
+    // calculate the centers of the vehicles' circles
+    compute_centers_of_approximation_circles(veh_st_rect1, veh_circle_tuple1);
+    compute_centers_of_approximation_circles(veh_st_rect2, veh_circle_tuple2);
+
+    for (i = 0; i &lt; 2; ++i) {
+        for (j = 0; j &lt; 2; ++j) {
+            dis = sqrt(pow(veh_circle_tuple1[i].x - veh_circle_tuple2[j].x, 2) + pow(veh_circle_tuple1[i].y - veh_circle_tuple2[j].y, 2));
+            //temp[i][j] = d2i(dis);
+            min_dis = fmin(min_dis, dis);
+        }
+    }
+    if (dis_thres &gt; min_dis)
+        return true;
+    else
+        return false;
+}
+   
+</declaration>
+	<template>
+		<name x="5" y="5">MovingObs</name>
+		<parameter>const id_t ID, const ST_CSTATE &amp;initCS, const ST_RECTANGLE &amp;shape, const ST_PAIR &amp;trajectory[MAXTP]</parameter>
+		<declaration>ST_VARIABLES vars;  // continuous variables
+ST_DSTATE dState;   // discrete state
+uint8_t pc = 0;     // policy counter
+uint8_t tc = 0;     // time counter
+ST_RECTANGLE self;
+
+void decisionMaking() {
+    if(pc &lt; MAXTP &amp;&amp; tc == trajectory[pc].time) {
+        // predefined trajectory starts
+        vars.x = trajectory[pc].cState.position.x;
+        vars.y = trajectory[pc].cState.position.y;
+        vars.velocity = mTimeStep(trajectory[pc].cState.velocity);
+
+        vars.acceleration = mTimeStep(trajectory[pc].cState.acceleration);
+        vars.yawRate = mTimeStep(trajectory[pc].cState.yawRate);
+
+        dState.acceleration = d2i(mTimeStep(trajectory[pc].cState.acceleration));
+        dState.yawRate = d2i(mTimeStep(trajectory[pc].cState.yawRate));
+        pc++;
+    }
+    else if(pc &lt; MAXTP) {
+        tc++;
+    }
+    else if(pc &gt;= MAXTP - 1) {
+        vars.velocity = 0;
+        vars.acceleration = 0;
+        vars.yawRate = 0;
+        dState.velocity = 0;
+        dState.acceleration = 0;
+        dState.yawRate = 0;
+    }
+}
+
+void initCon(ST_VARIABLES &amp;vars, const ST_CSTATE &amp;initCS) {
+    vars.x = initCS.position.x;
+    vars.y = initCS.position.y;
+    vars.velocity = mTimeStep(initCS.velocity);
+    vars.orientation = initCS.orientation;
+    vars.acceleration = mTimeStep(initCS.acceleration);
+    vars.yawRate = mTimeStep(initCS.yawRate);
+    time = 0;  
+}
+
+void initDis(ST_DSTATE &amp;dState, const ST_CSTATE &amp;initCS) {
+    dState.position.x = d2i(initCS.position.x);
+    dState.position.y = d2i(initCS.position.y);
+    dState.velocity = d2i(mTimeStep(initCS.velocity));
+    dState.orientation = d2i(initCS.orientation);
+    dState.acceleration = d2i(mTimeStep(initCS.acceleration));
+    dState.yawRate = d2i(mTimeStep(initCS.yawRate));
+}
+
+void updateDis(ST_DSTATE &amp;dState, ST_RECTANGLE &amp;shape) {
+    // real numbers of the current state
+    double rVelocity = 0.0, vx = 0.0, vy = 0.0;
+    double rOrientation = 0.0, rAcceleration = 0.0, rYawRate = 0.0;
+    // int/real numbers of velocity on X and Y axes
+    int dVx = 0, dVy = 0;
+    uint8_t i = 0;
+    int lane = 0;
+    ST_DPOINT veh_corners[4];
+    ST_DPOINT box_corners[4];
+
+    // update discrete velocity and orientation
+    dState.velocity = dState.velocity + dState.acceleration * P;
+    dState.orientation = dState.orientation + dState.yawRate * P;
+    // conversion to real numbers
+    rVelocity = i2d(dState.velocity);
+    rOrientation = i2d(dState.orientation);
+    rAcceleration = i2d(dState.acceleration);
+    rYawRate = i2d(dState.yawRate);
+    // velocity projection
+    vx = rVelocity*cos(rOrientation);
+    vy = rVelocity*sin(rOrientation);
+    dVx = d2i(vx);
+    dVy = d2i(vy);
+    // update other discrete varaibles
+    dState.position.x = dState.position.x + dVx * P;
+    dState.position.y = dState.position.y + dVy * P;
+    shape.center.x = dState.position.x;
+    shape.center.y = dState.position.y;
+    shape.orientation = dState.orientation;
+
+    dStateEgo.detection.collide |= check_collision(shapeEgo, shape, THRESHOLD);
+    dState.detection.collide = dStateEgo.detection.collide;
+}
+
+void updateCon(ST_VARIABLES &amp;vars) {
+    vars.acceleration = i2d(dStateEgo.acceleration);
+    vars.yawRate = i2d(dStateEgo.yawRate);
+}
+
+void initialize() {
+    pc = 0;
+    tc = 0;
+    initCon(vars,initCS);
+    initDis(dState,initCS);
+    self = shape;
+}
+
+
+
+
+
+
+
+
+
+</declaration>
+		<location id="id0" x="-102" y="-34">
+			<name x="-76" y="-34">Move</name>
+			<label kind="invariant" x="-255" y="-17">vars.x' == vars.velocity*cos(vars.orientation) &amp;&amp;
+vars.y' == vars.velocity*sin(vars.orientation) &amp;&amp;
+vars.velocity' == vars.acceleration &amp;&amp;
+vars.orientation' == vars.yawRate &amp;&amp;
+vars.yawRate' == 0 &amp;&amp;
+vars.acceleration' == 0</label>
+		</location>
+		<init ref="id0"/>
+		<transition id="id1" controllable="false">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="-161" y="-119">update?</label>
+			<label kind="assignment" x="-161" y="-102">updateDis(dState,self)</label>
+			<nail x="-136" y="-102"/>
+			<nail x="-68" y="-102"/>
+		</transition>
+		<transition id="id2" controllable="false">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="-246" y="-68">begin?</label>
+			<label kind="assignment" x="-246" y="-51">initialize()</label>
+			<nail x="-170" y="-68"/>
+			<nail x="-170" y="-34"/>
+		</transition>
+		<transition id="id3" controllable="false">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="-34" y="-68">chooseObs?</label>
+			<label kind="assignment" x="-42" y="-51">decisionMaking()</label>
+			<nail x="-34" y="-34"/>
+			<nail x="-34" y="-68"/>
+		</transition>
+	</template>
+	<template>
+		<name>Controller</name>
+		<parameter>const id_t ID, const int[0,MAXL] initLane, const ST_CSTATE &amp;initCS, const ST_RECTANGLE &amp;shape, const ST_RULES &amp;rules</parameter>
+		<declaration>typedef int[0,0] BRAKE_t;    // 1 gear of brake force
+typedef int[0,0] PUSH_t;     // 1 gear of push force
+typedef int[0,1] TURN_t;     // 2 speeds of turning 
+
+const int8_t Brake[3] = {d2i(-0.1), d2i(-0.2), d2i(-0.3)};
+const int8_t Push[3] = {d2i(0.1), d2i(0.2), d2i(0.3)};
+const int8_t Turn[2] = {d2i(0.1), d2i(-0.1)};
+const bool CONSTANTSPEED = true;
+
+void opConst() {
+    dStateEgo.acceleration = 0;
+    varsEgo.acceleration = 0;
+}
+
+void opAcc(int gear) {
+    dStateEgo.acceleration = Push[gear];
+    varsEgo.acceleration = i2d(Push[gear]);
+}
+
+void opBrake(int gear) {
+    dStateEgo.acceleration = Brake[gear];
+    varsEgo.acceleration = i2d(Brake[gear]);
+}
+
+void opTurn(int dir) {
+    int nr = Turn[dir];
+    int no = dStateEgo.orientation;
+    double rVelocity = i2d(dStateEgo.velocity);
+    double rOrientation = i2d(no);
+    double vx = rVelocity*cos(rOrientation);
+    double vy = rVelocity*sin(rOrientation);
+    int nx = shapeEgo.center.x + d2i(vx) * P;
+    int ny = shapeEgo.center.y + d2i(vy) * P;
+
+    dStateEgo.yawRate = Turn[dir];
+    varsEgo.yawRate = i2d(Turn[dir]);
+}
+
+void keep() {
+    dStateEgo.yawRate = 0;
+    varsEgo.yawRate = 0.0;
+}
+
+bool canAcc(int gear) {
+    int nextAcc = Push[gear];
+    if(!CONSTANTSPEED &amp;&amp; dStateEgo.velocity + P*nextAcc &lt;= rules.maxVelocity) 
+        return true;
+    return false;
+}
+
+bool canDec(int gear) {
+    int nextDec = Brake[gear];
+    if(!CONSTANTSPEED &amp;&amp; dStateEgo.velocity + P*nextDec &gt;= rules.minVelocity) 
+        return true;
+    return false;
+}
+
+bool canTurn(int dir) {
+    int nextRate = Turn[dir];
+    int nextOrientation = dStateEgo.orientation + P*nextRate;
+    ST_RECTANGLE nextShape = shape;
+    double rVelocity = i2d(dStateEgo.velocity);
+    double rOrientation = i2d(nextOrientation);
+    double vx = rVelocity*cos(rOrientation);
+    double vy = rVelocity*sin(rOrientation);
+    int lane = 0;
+    ST_DPOINT veh_corners[4];
+    ST_DPOINT box_corners[4];
+    bool outroad = false;
+
+    nextShape.center.x = shapeEgo.center.x + d2i(vx) * P;
+    nextShape.center.y = shapeEgo.center.y + d2i(vy) * P;
+    nextShape.orientation = nextOrientation;
+    outroad = !check_inlane_laneNet(nextShape, lane, veh_corners, box_corners);
+
+    if(nextOrientation &gt;= rules.minOrientation &amp;&amp; nextOrientation &lt;= rules.maxOrientation &amp;&amp; !outroad) 
+    //if(nextOrientation &gt;= rules.minOrientation &amp;&amp; nextOrientation &lt;= rules.maxOrientation)
+        return true;
+    return false;
+}
+
+void updateDis(ST_DSTATE &amp;dState, ST_RECTANGLE &amp;shape) {
+    // real numbers of the current state
+    double rVelocity = 0.0, vx = 0.0, vy = 0.0;
+    double rOrientation = 0.0, rAcceleration = 0.0, rYawRate = 0.0;
+    // int/real numbers of velocity on X and Y axes
+    int dVx = 0, dVy = 0;
+    uint8_t i = 0;
+    int lane = 0;
+    ST_DPOINT veh_corners[4];
+    ST_DPOINT box_corners[4];
+    uint8_t inlane_pts_num = 0;
+
+    // update discrete velocity and orientation
+    dState.velocity = dState.velocity + dState.acceleration * P;
+    dState.orientation = dState.orientation + dState.yawRate * P;
+    // conversion to real numbers
+    rVelocity = i2d(dState.velocity);
+    rOrientation = i2d(dState.orientation);
+    rAcceleration = i2d(dState.acceleration);
+    rYawRate = i2d(dState.yawRate);
+    // velocity projection
+    vx = rVelocity*cos(rOrientation);
+    vy = rVelocity*sin(rOrientation);
+    dVx = d2i(vx);
+    dVy = d2i(vy);
+    // update other discrete varaibles
+    dState.position.x = dState.position.x + dVx * P;
+    dState.position.y = dState.position.y + dVy * P;
+    shape.center.x = dState.position.x;
+    shape.center.y = dState.position.y;
+    shape.orientation = dState.orientation;
+    dState.detection.outside = !check_inlane_laneNet(shape, lane, veh_corners, box_corners);
+    dState.detection.reach = (getDisP2P(shape.center, planning.goal) &lt;= THRESHOLD);
+    if(staticObsExists) {
+        for(i = 0; i &lt; MAXSO; i++) {
+            dState.detection.collide |= check_collision(shape, staticObs[i], THRESHOLD);
+        }
+    }
+}
+
+void initDis(ST_DSTATE &amp;dState) {
+    ST_DPOINT leftTop = laneNet[initLane].left.points[0];
+    ST_DPOINT rightTop = laneNet[initLane].left.points[1];
+    ST_DPOINT rightDown = laneNet[initLane].right.points[1];
+    ST_DPOINT leftDown = laneNet[initLane].right.points[0];
+    ST_DPOINT middleDStart, middleDEnd;
+    int16_t diffX = 0, diffY = 0;
+    double xs, ys, xe, ye, angle;
+
+    diffX = leftDown.x - leftTop.x;
+    diffY = leftDown.y - leftTop.y;
+    middleDStart.x = leftTop.x + diffX/2;
+    middleDStart.y = leftTop.y + diffY/2;
+    diffX = rightDown.x - rightTop.x;
+    diffY = rightDown.y - rightTop.y;
+    middleDEnd.x = rightTop.x + diffX/2;
+    middleDEnd.y = rightTop.y + diffY/2;
+    
+    xs = i2d(middleDStart.x);
+    ys = i2d(middleDStart.y);
+    xe = i2d(middleDEnd.x);
+    ye = i2d(middleDEnd.y);
+
+    angle = atan2(ye-ys,xe-xs);
+
+    dState.position = middleDStart;
+    dState.velocity = d2i(mTimeStep(initCS.velocity));
+    dState.orientation = d2i(angle);
+    dState.acceleration = d2i(mTimeStep(initCS.acceleration));
+    dState.yawRate = d2i(mTimeStep(initCS.yawRate));
+
+    dState.detection.collide = false;
+    dState.detection.outside = false;
+    dState.detection.reach = false;
+}
+
+void initialize() {
+    initDis(dStateEgo);
+    shapeEgo = shape;
+    shapeEgo.center = dStateEgo.position;
+}
+
+
+
+
+
+
+
+
+
+</declaration>
+		<location id="id4" x="-340" y="-136">
+			<name x="-433" y="-161">Turn_Const</name>
+			<label kind="comments" x="-34" y="-51">One cannot turn and 
+acc or brake 
+simutaneously.</label>
+		</location>
+		<location id="id5" x="-68" y="136">
+			<name x="-187" y="136">Straight_Dec</name>
+		</location>
+		<location id="id6" x="-68" y="-136">
+			<name x="-51" y="-170">Straight_Acc</name>
+		</location>
+		<location id="id7" x="-204" y="0">
+			<name x="-289" y="-17">Choose</name>
+			<committed/>
+		</location>
+		<location id="id8" x="-340" y="136">
+			<name x="-476" y="161">Straight_Const</name>
+		</location>
+		<init ref="id8"/>
+		<transition id="id9" controllable="false">
+			<source ref="id5"/>
+			<target ref="id8"/>
+			<label kind="synchronisation" x="-280" y="187">begin?</label>
+			<label kind="assignment" x="-195" y="187">initialize()</label>
+			<nail x="-68" y="204"/>
+			<nail x="-340" y="204"/>
+		</transition>
+		<transition id="id10" controllable="false">
+			<source ref="id6"/>
+			<target ref="id8"/>
+			<label kind="synchronisation" x="-424" y="-221">begin?</label>
+			<label kind="assignment" x="-424" y="-204">initialize()</label>
+			<nail x="-68" y="-204"/>
+			<nail x="-442" y="-204"/>
+			<nail x="-442" y="0"/>
+		</transition>
+		<transition id="id11" controllable="false">
+			<source ref="id4"/>
+			<target ref="id8"/>
+			<label kind="synchronisation" x="-433" y="-34">begin?</label>
+			<label kind="assignment" x="-433" y="-17">initialize()</label>
+			<nail x="-408" y="-136"/>
+			<nail x="-408" y="0"/>
+		</transition>
+		<transition id="id12" controllable="false">
+			<source ref="id8"/>
+			<target ref="id8"/>
+			<label kind="synchronisation" x="-306" y="144">update?</label>
+			<label kind="assignment" x="-306" y="161">updateDis(dStateEgo,shapeEgo)</label>
+			<nail x="-331" y="170"/>
+			<nail x="-306" y="170"/>
+		</transition>
+		<transition id="id13" controllable="false">
+			<source ref="id5"/>
+			<target ref="id5"/>
+			<label kind="synchronisation" x="-25" y="93">update?</label>
+			<label kind="assignment" x="-25" y="119">updateDis(dStateEgo,shapeEgo)</label>
+			<nail x="-34" y="102"/>
+			<nail x="-34" y="136"/>
+		</transition>
+		<transition id="id14" controllable="false">
+			<source ref="id6"/>
+			<target ref="id6"/>
+			<label kind="synchronisation" x="-42" y="-144">update?</label>
+			<label kind="assignment" x="-42" y="-127">updateDis(dStateEgo,shapeEgo)</label>
+			<nail x="-34" y="-136"/>
+			<nail x="-34" y="-102"/>
+		</transition>
+		<transition id="id15" controllable="false">
+			<source ref="id4"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="-314" y="-187">update?</label>
+			<label kind="assignment" x="-314" y="-170">updateDis(dStateEgo,shapeEgo)</label>
+			<nail x="-306" y="-170"/>
+			<nail x="-340" y="-170"/>
+		</transition>
+		<transition id="id16">
+			<source ref="id4"/>
+			<target ref="id7"/>
+			<label kind="synchronisation" x="-357" y="-68">chooseEgo?</label>
+			<label kind="assignment" x="-357" y="-51">keep()</label>
+			<label kind="comments" x="-34" y="25">Keeps moving with 
+this angle</label>
+			<nail x="-340" y="-68"/>
+		</transition>
+		<transition id="id17" controllable="false">
+			<source ref="id8"/>
+			<target ref="id8"/>
+			<label kind="synchronisation" x="-467" y="102">begin?</label>
+			<label kind="assignment" x="-467" y="119">initialize()</label>
+			<nail x="-374" y="102"/>
+			<nail x="-374" y="127"/>
+		</transition>
+		<transition id="id18">
+			<source ref="id7"/>
+			<target ref="id4"/>
+			<label kind="select" x="-263" y="-93">d:TURN_t</label>
+			<label kind="guard" x="-263" y="-76">canTurn(d)</label>
+			<label kind="assignment" x="-263" y="-59">opTurn(d)</label>
+			<nail x="-272" y="-136"/>
+		</transition>
+		<transition id="id19">
+			<source ref="id5"/>
+			<target ref="id7"/>
+			<label kind="synchronisation" x="-195" y="102">chooseEgo?</label>
+			<nail x="-136" y="136"/>
+		</transition>
+		<transition id="id20">
+			<source ref="id7"/>
+			<target ref="id5"/>
+			<label kind="select" x="-144" y="17">f:BRAKE_t</label>
+			<label kind="guard" x="-144" y="34">canDec(f)</label>
+			<label kind="assignment" x="-144" y="51">opBrake(f)</label>
+			<nail x="-68" y="68"/>
+		</transition>
+		<transition id="id21">
+			<source ref="id6"/>
+			<target ref="id7"/>
+			<label kind="synchronisation" x="-195" y="-119">chooseEgo?</label>
+			<nail x="-136" y="-136"/>
+		</transition>
+		<transition id="id22">
+			<source ref="id7"/>
+			<target ref="id6"/>
+			<label kind="select" x="-136" y="-76">f:PUSH_t</label>
+			<label kind="guard" x="-136" y="-59">canAcc(f)</label>
+			<label kind="assignment" x="-136" y="-42">opAcc(f)</label>
+			<nail x="-68" y="-68"/>
+		</transition>
+		<transition id="id23">
+			<source ref="id7"/>
+			<target ref="id8"/>
+			<label kind="assignment" x="-340" y="51">opConst()</label>
+			<nail x="-340" y="68"/>
+		</transition>
+		<transition id="id24">
+			<source ref="id8"/>
+			<target ref="id7"/>
+			<label kind="synchronisation" x="-314" y="102">chooseEgo?</label>
+			<nail x="-272" y="136"/>
+		</transition>
+	</template>
+	<template>
+		<name>Decisions</name>
+		<declaration>clock timer;
+int counter = 0;</declaration>
+		<location id="id25" x="102" y="68">
+			<name x="110" y="42">Idle</name>
+			<label kind="invariant" x="85" y="85">timer&lt;=P</label>
+		</location>
+		<location id="id26" x="102" y="-34">
+			<name x="92" y="-68">Done</name>
+			<urgent/>
+		</location>
+		<location id="id27" x="-68" y="-34">
+			<name x="-78" y="-68">ObsGo</name>
+			<urgent/>
+		</location>
+		<location id="id28" x="-204" y="-34">
+			<name x="-214" y="-68">EgoGo</name>
+			<urgent/>
+		</location>
+		<location id="id29" x="-340" y="-34">
+			<name x="-350" y="-68">Start</name>
+			<urgent/>
+		</location>
+		<init ref="id29"/>
+		<transition id="id30" controllable="false">
+			<source ref="id25"/>
+			<target ref="id28"/>
+			<label kind="guard" x="-348" y="51">counter==MAXTIME</label>
+			<label kind="synchronisation" x="-348" y="68">begin!</label>
+			<label kind="assignment" x="-348" y="85">timer=0,counter=0</label>
+			<nail x="68" y="102"/>
+			<nail x="-340" y="102"/>
+			<nail x="-340" y="0"/>
+		</transition>
+		<transition id="id31" controllable="false">
+			<source ref="id29"/>
+			<target ref="id28"/>
+			<label kind="synchronisation" x="-280" y="-59">begin!</label>
+		</transition>
+		<transition id="id32" controllable="false">
+			<source ref="id25"/>
+			<target ref="id28"/>
+			<label kind="guard" x="-170" y="0">timer==P&amp;&amp;
+counter!=MAXTIME</label>
+			<label kind="synchronisation" x="-170" y="42">update!</label>
+			<label kind="assignment" x="-102" y="42">timer=0,counter++</label>
+			<nail x="-204" y="68"/>
+		</transition>
+		<transition id="id33" controllable="false">
+			<source ref="id26"/>
+			<target ref="id25"/>
+			<label kind="assignment" x="59" y="-8">timer=0</label>
+		</transition>
+		<transition id="id34" controllable="false">
+			<source ref="id27"/>
+			<target ref="id26"/>
+			<label kind="synchronisation" x="-34" y="-59">chooseObs!</label>
+		</transition>
+		<transition id="id35" controllable="false">
+			<source ref="id28"/>
+			<target ref="id27"/>
+			<label kind="synchronisation" x="-170" y="-59">chooseEgo!</label>
+		</transition>
+	</template>
+	<template>
+		<name>Dynamics</name>
+		<parameter>const id_t ID, const int[0,MAXL] initLane, const ST_CSTATE &amp;initCS</parameter>
+		<declaration>void initCon(ST_VARIABLES &amp;vars) {
+    ST_DPOINT leftTop = laneNet[initLane].left.points[0];
+    ST_DPOINT rightTop = laneNet[initLane].left.points[1];
+    ST_DPOINT rightDown = laneNet[initLane].right.points[1];
+    ST_DPOINT leftDown = laneNet[initLane].right.points[0];
+    ST_DPOINT middleDStart, middleDEnd;
+    int16_t diffX = 0, diffY = 0;
+    double xs, ys, xe, ye, angle;
+
+    diffX = leftDown.x - leftTop.x;
+    diffY = leftDown.y - leftTop.y;
+    middleDStart.x = leftTop.x + diffX/2;
+    middleDStart.y = leftTop.y + diffY/2;
+    diffX = rightDown.x - rightTop.x;
+    diffY = rightDown.y - rightTop.y;
+    middleDEnd.x = rightTop.x + diffX/2;
+    middleDEnd.y = rightTop.y + diffY/2;
+    
+    xs = i2d(middleDStart.x);
+    ys = i2d(middleDStart.y);
+    xe = i2d(middleDEnd.x);
+    ye = i2d(middleDEnd.y);
+
+    angle = atan2(ye-ys,xe-xs);
+
+    vars.x = i2d(middleDStart.x);
+    vars.y = i2d(middleDStart.y);
+    vars.velocity = mTimeStep(initCS.velocity);
+    vars.orientation = angle;
+    vars.acceleration = mTimeStep(initCS.acceleration);
+    vars.yawRate = mTimeStep(initCS.yawRate);
+
+    time = 0;
+    if(dStateEgo.detection.reach) 
+        D = 0; // only reset the reward function when reaching the goal
+    if(dStateEgo.detection.collide || dStateEgo.detection.outside)
+        D = D + 100; // punish the ego when it collides or goes outside the road    
+}
+
+void updateCon(ST_VARIABLES &amp;vars) {
+    vars.acceleration = i2d(dStateEgo.acceleration);
+    vars.yawRate = i2d(dStateEgo.yawRate);
+}</declaration>
+		<location id="id36" x="0" y="0">
+			<name x="-59" y="-8">Move</name>
+			<label kind="invariant" x="-161" y="17">varsEgo.x' == varsEgo.velocity*cos(varsEgo.orientation) &amp;&amp;
+varsEgo.y' == varsEgo.velocity*sin(varsEgo.orientation) &amp;&amp;
+varsEgo.velocity' == varsEgo.acceleration &amp;&amp;
+varsEgo.orientation' == varsEgo.yawRate &amp;&amp;
+varsEgo.yawRate' == 0 &amp;&amp;
+varsEgo.acceleration' == 0 &amp;&amp;
+D' == getDisP2P(dStateEgo.position, planning.goal) 
+      - dStateEgo.detection.reach * 100 
+      + dStateEgo.detection.collide * 50 
+      + dStateEgo.detection.outside * 50</label>
+		</location>
+		<init ref="id36"/>
+		<transition id="id37" controllable="false">
+			<source ref="id36"/>
+			<target ref="id36"/>
+			<label kind="synchronisation" x="68" y="-68">update?</label>
+			<label kind="assignment" x="68" y="-51">updateCon(varsEgo)</label>
+			<nail x="68" y="-68"/>
+			<nail x="68" y="-34"/>
+		</transition>
+		<transition id="id38" controllable="false">
+			<source ref="id36"/>
+			<target ref="id36"/>
+			<label kind="synchronisation" x="-161" y="-68">begin?</label>
+			<label kind="assignment" x="-161" y="-51">initCon(varsEgo)</label>
+			<nail x="-68" y="-34"/>
+			<nail x="-68" y="-68"/>
+		</transition>
+	</template>
+	<system>// Generated moving obstacles starts
+const ST_CSTATE initCS42 = {{2.25, 3.5}, 23.0, 0.0, 0.0, 0.0};
+const ST_RECTANGLE shapeObs42 = {{225, 350}, 200, 450, 0};
+const ST_PAIR PHOLDER = {NONE,{{NONE,NONE},NONE,NONE,NONE,NONE}};
+const ST_PAIR trajectory42[MAXTP] = {{1, {{4.55, 3.494}, 23.0, -0.01044, 0.0, 0}}, {2, {{6.846, 3.421}, 23.0, -0.05337, 0.0001145, 0}}, {3, {{9.132, 3.27}, 23.0, -0.07886, 0.0, 0}}, {4, {{11.39, 3.041}, 23.0, -0.1229, 0.0001028, 0}}, {5, {{13.64, 2.734}, 23.0, -0.1484, 0.0, 0}}, {6, {{15.83, 2.355}, 23.0, -0.1925, 8.407e-05, 0}}, {7, {{18.01, 1.901}, 23.0, -0.2106, 0.0, 0}}, {8, {{20.19, 1.419}, 23.0, -0.2182, 6.072e-05, 0}}, {9, {{22.45, 0.939}, 23.0, -0.1926, 0.0, 0}}, {10, {{24.78, 0.5254}, 23.0, -0.1575, 3.58e-05, 0}}, {11, {{27.14, 0.1907}, 23.0, -0.123, 0.0, 0}}, {12, {{29.54, -0.06328}, 23.0, -0.08798, 1.201e-05, 0}}, {13, {{31.95, -0.2344}, 23.0, -0.05343, 0.0, 0}}, {14, {{34.38, -0.3217}, 23.0, -0.01842, 0.0, 0}}, {15, {{36.81, -0.3254}, 23.0, 0.01468, 1.756e-05, 0}}, {16, {{39.2, -0.2572}, 23.0, 0.04074, 0.0, 0}}, {17, {{41.55, -0.1413}, 23.0, 0.05578, 3.125e-05, 0}}, {18, {{43.86, -0.006988}, 23.0, 0.05876, 0.0, 0}}, {19, {{46.12, 0.12}, 23.0, 0.05161, 4.009e-05, 0}}, {20, {{48.38, 0.222}, 23.0, 0.03826, 0.0, 0}}, {21, {{50.63, 0.2912}, 23.0, 0.0234, 4.448e-05, 0}}, {22, {{52.89, 0.3294}, 23.0, 0.01106, 0.0, 0}}, {23, {{55.16, 0.3449}, 23.0, 0.003413, 4.516e-05, 0}}, {24, {{57.45, 0.3484}, 23.0, 0.0002996, 0.0, 0}}, {25, {{59.75, 0.3483}, 23.0, -0.0001381, 4.297e-05, 0}}, {26, {{62.05, 0.3484}, 23.0, 0.0002047, 0.0, 0}}, {27, {{64.35, 0.3491}, 23.0, 0.0003449, 3.876e-05, 0}}, {28, {{66.65, 0.3497}, 23.0, 0.0001931, 0.0, 0}}, {29, {{68.95, 0.35}, 23.0, 3.321e-05, 3.326e-05, 0}}, {30, {{71.25, 0.35}, 23.0, 2.45e-06, 0.0, 0}}, {31, {{73.55, 0.35}, 23.0, 8.362e-06, 2.708e-05, 0}}, {32, {{75.85, 0.35}, 23.0, 1.375e-06, 0.0, 0}}, {33, {{78.15, 0.35}, 23.0, 5.35e-07, 2.067e-05, 0}}, {34, {{80.45, 0.35}, 23.0, 5.53e-08, 0.0, 0}}, {35, {{82.75, 0.35}, 23.0, 5.596e-09, 1.436e-05, 0}}, {36, {{85.05, 0.35}, 23.0, -4.989e-10, 0.0, 0}}, {37, {{87.35, 0.35}, 23.0, 3.54e-10, 8.336e-06, 0}}, {38, {{89.65, 0.35}, 23.0, -3.208e-10, 0.0, 0}}, {39, {{91.95, 0.35}, 23.0, 9.801e-11, 2.699e-06, 0}}, {40, {{94.25, 0.35}, 23.0, -1.082e-10, 0.0, 0}}};
+obs42 = MovingObs(42, initCS42, shapeObs42, trajectory42);
+const ST_CSTATE initCS44 = {{50.0, 0.0}, 22.0, 0.0, 0.0, 0.0};
+const ST_RECTANGLE shapeObs44 = {{5000, 0}, 180, 430, 0};
+const ST_PAIR trajectory44[MAXTP] = {{1, {{52.2, 0.0}, 22.0, 0.0, 0, 0}}, {2, {{54.4, 0.0}, 22.0, 0.0, 0, 0}}, {3, {{56.6, 0.0}, 22.0, 0.0, 0, 0}}, {4, {{58.8, 0.0}, 22.0, 0.0, 0, 0}}, {5, {{61.0, 0.0}, 22.0, 0.0, 0, 0}}, {6, {{63.2, 0.0}, 22.0, 0.0, 0, 0}}, {7, {{65.4, 0.0}, 22.0, 0.0, 0, 0}}, {8, {{67.6, 0.0}, 22.0, 0.0, 0, 0}}, {9, {{69.8, 0.0}, 22.0, 0.0, 0, 0}}, {10, {{72.0, 0.0}, 22.0, 0.0, 0, 0}}, {11, {{74.2, 0.0}, 22.0, 0.0, 0, 0}}, {12, {{76.4, 0.0}, 22.0, 0.0, 0, 0}}, {13, {{78.6, 0.0}, 22.0, 0.0, 0, 0}}, {14, {{80.8, 0.0}, 22.0, 0.0, 0, 0}}, {15, {{83.0, 0.0}, 22.0, 0.0, 0, 0}}, {16, {{85.2, 0.0}, 22.0, 0.0, 0, 0}}, {17, {{87.4, 0.0}, 22.0, 0.0, 0, 0}}, {18, {{89.6, 0.0}, 22.0, 0.0, 0, 0}}, {19, {{91.8, 0.0}, 22.0, 0.0, 0, 0}}, {20, {{94.0, 0.0}, 22.0, 0.0, 0, 0}}, {21, {{96.2, 0.0}, 22.0, 0.0, 0, 0}}, {22, {{98.4, 0.0}, 22.0, 0.0, 0, 0}}, {23, {{100.6, 0.0}, 22.0, 0.0, 0, 0}}, {24, {{102.8, 0.0}, 22.0, 0.0, 0, 0}}, {25, {{105.0, 0.0}, 22.0, 0.0, 0, 0}}, {26, {{107.2, 0.0}, 22.0, 0.0, 0, 0}}, {27, {{109.4, 0.0}, 22.0, 0.0, 0, 0}}, {28, {{111.6, 0.0}, 22.0, 0.0, 0, 0}}, {29, {{113.8, 0.0}, 22.0, 0.0, 0, 0}}, {30, {{116.0, 0.0}, 22.0, 0.0, 0, 0}}, {31, {{118.2, 0.0}, 22.0, 0.0, 0, 0}}, {32, {{120.4, 0.0}, 22.0, 0.0, 0, 0}}, {33, {{122.6, 0.0}, 22.0, 0.0, 0, 0}}, {34, {{124.8, 0.0}, 22.0, 0.0, 0, 0}}, {35, {{127.0, 0.0}, 22.0, 0.0, 0, 0}}, {36, {{129.2, 0.0}, 22.0, 0.0, 0, 0}}, {37, {{131.4, 0.0}, 22.0, 0.0, 0, 0}}, {38, {{133.6, 0.0}, 22.0, 0.0, 0, 0}}, {39, {{135.8, 0.0}, 22.0, 0.0, 0, 0}}, {40, {{138.0, 0.0}, 22.0, 0.0, 0, 0}}};
+obs44 = MovingObs(44, initCS44, shapeObs44, trajectory44);
+
+// Generated moving obstacles ends
+
+// position, velocity, orientation, acceleration, yawRate
+const ST_CSTATE initEgo = {{NONE, NONE}, 30.0, 0.0, 0.0, 0.0}; 
+const ST_RECTANGLE initShapeEgo = {{NONE, NONE}, 100, 450, 0};
+const ST_RULES rules = {4000, 0, 20, -20}; 
+const int[0,MAXL] initLane = 0;
+egoController = Controller(1, initLane, initEgo, initShapeEgo, rules);
+egoDynamics = Dynamics(1, initLane, initEgo);
+
+// Generated model instances start
+system Decisions, egoController, egoDynamics, obs42, obs44;
+
+// Generated model instances end
+</system>
+	<queries>
+		<option key="--total-runs" value="50"/>
+		<option key="--max-iterations" value="3"/>
+		<option key="--good-runs" value="20"/>
+		<option key="--eval-runs" value="10"/>
+		<option key="--runs-pr-state" value="10"/>
+		<option key="--diagnostic" value="0"/>
+		<query>
+			<formula>E&lt;&gt; dStateEgo.detection.reach</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2024-05-21 09:13:00 +0200">
+				<option key="--total-runs" value="50"/>
+				<option key="--max-iterations" value="3"/>
+				<option key="--good-runs" value="20"/>
+				<option key="--eval-runs" value="10"/>
+				<option key="--runs-pr-state" value="10"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>E[] !dStateEgo.detection.collide &amp;&amp; !dStateEgo.detection.outside</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2024-05-21 09:13:02 +0200">
+				<option key="--total-runs" value="50"/>
+				<option key="--max-iterations" value="3"/>
+				<option key="--good-runs" value="20"/>
+				<option key="--eval-runs" value="10"/>
+				<option key="--runs-pr-state" value="10"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>strategy safe = control:A[] !dStateEgo.detection.collide &amp;&amp; !dStateEgo.detection.outside
+</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2024-05-17 10:01:34 +0200">
+				<option key="--total-runs" value="50"/>
+				<option key="--max-iterations" value="3"/>
+				<option key="--good-runs" value="20"/>
+				<option key="--eval-runs" value="10"/>
+				<option key="--runs-pr-state" value="10"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>strategy reachSafe = minE(D) [&lt;=MAXTIME] {egoController.location}-&gt;{dStateEgo.position.x, dStateEgo.position.y, dStateEgo.velocity, dStateEgo.orientation, dStateEgo.acceleration, dStateEgo.yawRate}: &lt;&gt; time&gt;=MAXTIME under safe</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2024-05-17 10:01:38 +0200">
+				<option key="--total-runs" value="50"/>
+				<option key="--max-iterations" value="3"/>
+				<option key="--good-runs" value="20"/>
+				<option key="--eval-runs" value="10"/>
+				<option key="--runs-pr-state" value="10"/>
+				<option key="--diagnostic" value="0"/>
+			</result>
+		</query>
+		<query>
+			<formula>simulate [&lt;=MAXTIME] { varsEgo.x, varsEgo.y, varsEgo.orientation, varsEgo.velocity, varsEgo.acceleration } under reachSafe</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2024-05-17 10:01:41 +0200">
+				<option key="--total-runs" value="50"/>
+				<option key="--max-iterations" value="3"/>
+				<option key="--good-runs" value="20"/>
+				<option key="--eval-runs" value="10"/>
+				<option key="--runs-pr-state" value="10"/>
+				<option key="--diagnostic" value="0"/>
+				<plot title="Simulations (1)" xaxis="time" yaxis="value">
+					<series title="varsEgo.x" type="l" color="0xff0000" encoding="csv">0.0,0.0
+10.000002,30.000006
+					</series>
+					<series title="varsEgo.y" type="l" color="0xccff00" encoding="csv">0.0,0.0
+10.000002,0.0
+					</series>
+					<series title="varsEgo.orientation" type="l" color="0x00ff66" encoding="csv">0.0,0.0
+10.000002,0.0
+					</series>
+					<series title="varsEgo.velocity" type="l" color="0x0066ff" encoding="csv">0.0,0.0
+0.0,3.0
+10.000002,3.0
+					</series>
+					<series title="varsEgo.acceleration" type="l" color="0xcc00ff" encoding="csv">0.0,0.0
+10.000002,0.0
+					</series>
+					<comment/>
+				</plot>
+			</result>
+		</query>
+	</queries>
+</nta>

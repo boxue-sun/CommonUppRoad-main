@@ -1,0 +1,17 @@
+User details
+Name:	Rong Gu
+Email:	rong.gu@mdu.se
+Organization:	Mälardalen University
+Title:	Postdoc
+The above information can be updated by filling the registration form.
+
+Licenses
+Key	Service	Features	Valid from	Valid until
+4eee353f-f33c-4b2e-98ec-d0f8b4435b7a	Uppaal (academic)	editor,simulator,verifier,smc	2024-04-16 06:00:48	2024-10-16 06:00:48
+
+
+Keep your license keys securely: your key may stop working if someone else starts using it!
+
+For technical information on how the license is managed on your computer please see License Help.
+
+In case of issues, please contact web@veriaal.dk.

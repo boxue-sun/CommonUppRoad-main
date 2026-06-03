@@ -1,0 +1,1 @@
+./bin_mac/verifyta ./models/DEU_Ffb-1_3_T-1_generated_lanelet.xml query.q -F 1.0 -u -D 0.01 -s --max-iterations 30 --eval-runs 100 --good-runs 200 --total-runs 500 --reset-no-better 10 --max-reset-learning 3
