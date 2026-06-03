@@ -1,2 +1,0 @@
-commonroad-io>=2021.2
-sumocr>=2021.5

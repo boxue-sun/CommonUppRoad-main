@@ -6,3 +6,9 @@ __pycache__/
 .claude/
 *.dSYM/
 experiments/animation/temp_figs/
+uppaal/bin_linux/
+uppaal/bin_mac/
+commonroad-rl/external/
+*.o
+*.so
+*.dylib

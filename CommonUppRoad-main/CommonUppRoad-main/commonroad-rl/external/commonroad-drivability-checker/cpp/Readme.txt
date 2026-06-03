@@ -1,1 +1,0 @@
-Most of the collision checker functionality was developed by Vitaliy Rusinov.
