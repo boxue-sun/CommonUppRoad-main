@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(pip install *)",
+      "Bash(python gen_ppt.py)",
+      "Bash(python3)",
+      "Bash(python fix_quotes.py)"
+    ]
+  }
+}

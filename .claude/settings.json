@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(python visualize_scenarios.py)",
+      "Bash(python generate_scenario_gifs.py)",
+      "Bash(python -c \"from commonroad.scenario.obstacle import DynamicObstacle, ObstacleType; from commonroad.scenario.state import CustomState, InitialState; from commonroad.scenario.trajectory import Trajectory; from commonroad.prediction.prediction import TrajectoryPrediction; print\\('OK'\\)\")",
+      "Bash(python -c \"from commonroad.geometry.shape import Rectangle; print\\('OK'\\)\")",
+      "Bash(python -c \"from commonroad.scenario.scenario import Scenario; from commonroad.geometry.shape import Shape, Rectangle; print\\('OK'\\)\")",
+      "Bash(git rm *)",
+      "Bash(git reset *)",
+      "Bash(git add *)"
+    ]
+  }
+}
