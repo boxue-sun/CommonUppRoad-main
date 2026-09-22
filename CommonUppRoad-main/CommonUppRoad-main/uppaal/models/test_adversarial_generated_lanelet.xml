@@ -13,7 +13,7 @@ const int MAXDO = 2;
 const int MAXTP = 1;
 const int MAXPRE = 1;
 const int MAXSUC = 1;
-const double THRESHOLD = 0.02;
+const double THRESHOLD = 4.0;
 const double TIMESTEPSIZE = 0.1;
 const double RADAR = 100;
 const uint8_t N1 = 1;
@@ -727,7 +727,14 @@ void makeDecision(){
     vEgo = i2d(cps_i_state.velocity);
     findVehicleAhead(gap, vLead);
     idmAcc = computeIDM(vEgo, vLead, gap);
-    cps_i_state.accRate = d2i(idmAcc);
+
+    // 限幅：最大加速 2 m/s²，最大减速 -10 m/s²（紧急刹车）
+    if(idmAcc &gt; 2.0) idmAcc = 2.0;
+    if(idmAcc &lt; -10.0) idmAcc = -10.0;
+
+    // IDM 输出直接设为加速度（不是 jerk）
+    cps_i_state.acceleration = d2i(idmAcc);
+    cps_i_state.accRate = d2i(0.0);
 }
 
 void reload(){

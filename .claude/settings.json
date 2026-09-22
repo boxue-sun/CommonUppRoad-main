@@ -9,7 +9,15 @@
       "Bash(python -c \"from commonroad.scenario.scenario import Scenario; from commonroad.geometry.shape import Shape, Rectangle; print\\('OK'\\)\")",
       "Bash(git rm *)",
       "Bash(git reset *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(findstr \"127.0.0.1\")",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(reg query *)",
+      "Bash(git config *)",
+      "Bash(du -sh .)",
+      "Bash(powershell -Command \"\\(Get-ChildItem -Recurse -File | Measure-Object -Property Length -Sum\\).Sum / 1MB\")",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

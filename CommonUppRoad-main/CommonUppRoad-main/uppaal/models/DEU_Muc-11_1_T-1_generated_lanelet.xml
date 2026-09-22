@@ -12,7 +12,7 @@ const int MAXDO = 5;
 const int MAXTP = 1;
 const int MAXPRE = 3;
 const int MAXSUC = 3;
-const double THRESHOLD = 0.02;
+const double THRESHOLD = 4.0;
 const double TIMESTEPSIZE = 0.1;
 const double RADAR = 100;
 const uint8_t N1 = 1;
@@ -794,16 +794,79 @@ double computeIDM(double v, double vLead, double gap) {
     return acc;
 }
 
+// === 法规驾驶员模型参数 ===
+const double REACTION_TIME = 1.5;    // 反应时间 1.5 秒
+const double BRAKE_RATE = 3.0;       // 刹车建立速率 m/s² 每秒
+const double MAX_BRAKE = -8.0;       // 最大制动减速度
+const double COMFORT_BRAKE = -4.0;   // 舒适制动减速度
+const double TTC_EMERGENCY = 1.5;    // TTC 紧急制动阈值（秒）
+const double TTC_WARNING = 3.0;      // TTC 预警制动阈值（秒）
+
+int32_t reactionCount = 0;           // 反应计数器
+bool dangerDetected = false;         // 危险标志
+
 void makeDecision(){
     double gap = 1000000.0;
     double vLead = 0.0;
     double vEgo = 0.0;
-    double idmAcc = 0.0;
+    double ttc = 999.0;
+    double targetAcc = 0.0;
+    double currentAcc = 0.0;
+    double accStep = 0.0;
 
     vEgo = i2d(cps_i_state.velocity);
     findVehicleAhead(gap, vLead);
-    idmAcc = computeIDM(vEgo, vLead, gap);
-    cps_i_state.accRate = d2i(idmAcc);
+    currentAcc = i2d(cps_i_state.acceleration);
+
+    // 计算 TTC（碰撞时间）
+    if (vEgo &gt; vLead + 0.1) {
+        ttc = gap / (vEgo - vLead);
+    } else {
+        ttc = 999.0;  // 不会碰撞
+    }
+
+    // === 法规模型决策逻辑 ===
+    // 第一层：反应延迟（检测到危险后，需要 REACTION_TIME 才开始刹车）
+    if (ttc &lt; TTC_WARNING) {
+        if (!dangerDetected) {
+            dangerDetected = true;
+            reactionCount = 0;
+        }
+        reactionCount++;
+    } else {
+        dangerDetected = false;
+        reactionCount = 0;
+    }
+
+    // 第二层：根据 TTC 和反应状态决定目标加速度
+    if (!dangerDetected) {
+        // 安全区域：保持当前速度或轻微加速
+        targetAcc = 0.5;
+    } else if (reactionCount * 0.1 &lt; REACTION_TIME) {
+        // 反应时间内：还没开始刹车（人的反应延迟）
+        targetAcc = 0.0;
+    } else if (ttc &lt; TTC_EMERGENCY) {
+        // 紧急区域：最大制动
+        targetAcc = MAX_BRAKE;
+    } else if (ttc &lt; TTC_WARNING) {
+        // 预警区域：舒适制动
+        targetAcc = COMFORT_BRAKE;
+    }
+
+    // 第三层：渐进刹车（加速度不能瞬间跳变，每步最多变 BRAKE_RATE * 0.1）
+    accStep = BRAKE_RATE * 0.1;  // 每步最大变化量
+    if (targetAcc &lt; currentAcc - accStep) {
+        // 需要减速，但渐进
+        cps_i_state.acceleration = d2i(currentAcc - accStep);
+    } else if (targetAcc &gt; currentAcc + accStep) {
+        // 需要加速，但渐进
+        cps_i_state.acceleration = d2i(currentAcc + accStep);
+    } else {
+        // 够近了，直接到位
+        cps_i_state.acceleration = d2i(targetAcc);
+    }
+
+    cps_i_state.accRate = d2i(0.0);
 }
 
 void reload(){

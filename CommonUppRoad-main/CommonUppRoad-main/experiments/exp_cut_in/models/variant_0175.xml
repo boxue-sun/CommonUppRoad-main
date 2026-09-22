@@ -1,0 +1,1149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>// Generated scenario starts
+const int P = 1;
+const uint16_t MAXTIME = 50;
+const int MAXP = 2;
+const int NONE = -1;
+const int MAXL = 3;
+const int MAXSO = 1;
+const int MAXDO = 1;
+const int MAXTP = 1;
+const int MAXPRE = 1;
+const int MAXSUC = 1;
+const double THRESHOLD = 4.0;
+const double TIMESTEPSIZE = 0.1;
+const double RADAR = 100;
+const uint8_t N1 = 1;
+const uint8_t N2 = 4;
+const uint8_t MAXACT = 2;
+typedef int[0,MAXACT-1] act_id_t;
+const uint8_t BASE = 10;
+const uint8_t EXPONENT = 1;
+const uint8_t MAXOBS = 1;
+typedef int[0,MAXOBS-1] obs_id_t;
+
+typedef int[-1,65535] id_t;
+typedef struct { int32_t x; int32_t y; }ST_IPOINT;
+typedef struct { double x; double y; }ST_DPOINT;
+typedef struct { ST_IPOINT ends[2]; }ST_DLINE;
+typedef struct { ST_IPOINT points[MAXP]; bool dashLine; }ST_BOUND;
+typedef struct { id_t ID; ST_BOUND left; ST_BOUND right; id_t predecessor[MAXPRE]; id_t successor[MAXSUC]; id_t adjLeft; bool dirLeft; id_t adjRight; bool dirRight; }ST_LANE;
+typedef struct { bool collide; bool outside; bool reach; }ST_DETECTION;
+typedef struct { ST_DPOINT position; double velocity; double orientation; double acceleration; double accRate; double yawRate; }ST_DSTATE;
+typedef struct { ST_IPOINT position; int32_t velocity; int32_t orientation; int32_t acceleration; int32_t accRate; int32_t yawRate; ST_DETECTION detection; }ST_ISTATE;
+typedef struct { hybrid clock x; hybrid clock y; hybrid clock velocity; hybrid clock orientation; hybrid clock acceleration; }ST_DYNAMICS;
+typedef struct { ST_IPOINT center; int32_t width; int32_t length; int32_t orientation; }ST_RECTANGLE;
+typedef struct { int32_t maxVelocity; int32_t minVelocity; int32_t maxOrientation; int32_t minOrientation; }ST_RULES;
+typedef struct { ST_IPOINT goal; }ST_PLANNING;
+typedef struct { int32_t time; ST_DSTATE dState; }ST_PAIR;
+typedef struct { int32_t vMin; int32_t vMax; int32_t accMax; int32_t decMax; int32_t laneChangeProb; int32_t cutInRange; int32_t initialLane; }ST_OBEHAVIOR;
+
+const ST_BOUND leftLane1 = {{{0, 17}, {1990, 17}}, false};
+const ST_BOUND rightLane1 = {{{0, -17}, {1990, -17}}, false};
+const ST_LANE lane1 = {1, leftLane1, rightLane1, {NONE}, {NONE}, 2, false, NONE, false};
+const ST_BOUND leftLane2 = {{{0, 52}, {1990, 52}}, false};
+const ST_BOUND rightLane2 = {{{0, 17}, {1990, 17}}, false};
+const ST_LANE lane2 = {2, leftLane2, rightLane2, {NONE}, {NONE}, 3, true, 1, false};
+const ST_BOUND leftLane3 = {{{0, 87}, {1990, 87}}, false};
+const ST_BOUND rightLane3 = {{{0, 52}, {1990, 52}}, false};
+const ST_LANE lane3 = {3, leftLane3, rightLane3, {NONE}, {NONE}, NONE, false, 2, true};
+const ST_LANE laneNet[MAXL] = {lane1, lane2, lane3};
+const bool staticObsExists = false;
+const ST_RECTANGLE staticObs[MAXSO] = {{{NONE, NONE}, NONE, NONE, NONE}};
+const ST_PLANNING planning = {{995, 0}};
+
+
+broadcast chan perform[MAXACT],decide,sense,start,end;
+//chan priority decide&lt;default&lt;sense;
+
+//NOTE: when overflow happens, the sign of the number will be changed
+//but this function has no assertion about overflow
+int32_t d2i(double value) {
+    return fint(value*pow(BASE,EXPONENT));
+}
+
+double i2d(int32_t value) {
+    return value/pow(BASE,EXPONENT);
+}
+
+int32_t min(const int32_t v1, const int32_t v2){
+    return v1 &lt; v2? v1:v2;
+}
+
+int32_t max(const int32_t v1, const int32_t v2){
+    return v1 &gt; v2? v1:v2;
+}
+
+const int32_t INC_ACC = d2i(0.2);
+const int32_t DEC_ACC = d2i(-0.1);
+const int32_t CONST_ACC = d2i(0);
+const int32_t INC_DIR = d2i(0.2);
+const int32_t DEC_DIR = d2i(-0.2);
+const int32_t CONST_DIR = d2i(0);
+const int32_t MAX_ACC = d2i(1);
+const int32_t MIN_ACC = d2i(-1);
+const int32_t MAX_V = d2i(5);
+const int32_t MIN_V = d2i(-2);
+const int32_t PI = d2i(M_PI);
+
+typedef int[-1,1] acc_t;
+const double ACC_GRA = 1; //granularity of acceleration
+typedef int[-1,1] dir_t;
+const double DIR_GRA = 1; //granularity of turning
+
+ST_ISTATE cps_i_state, obs_i_state[MAXOBS];
+ST_DYNAMICS cps_dynamic, obs_dynamic[MAXOBS]; 
+ST_RECTANGLE cps_shape, obs_shape[MAXOBS]; 
+//clock g_time;
+hybrid clock rSafe, rComfort, rProgress, rCost;
+int count = 0;
+int32_t reward = 0;
+int32_t distanceToGoal = 0;
+
+double mTimeStep(const double value) {
+    return value*TIMESTEPSIZE;
+}
+
+int32_t getDisP2P(const ST_IPOINT &amp;p1, const ST_IPOINT &amp;p2) {
+    double distance = 0.0;
+    double rx1 = i2d(p1.x), ry1 = i2d(p1.y);
+    double rx2 = i2d(p2.x), ry2 = i2d(p2.y);
+    distance = sqrt(pow(rx1 - rx2, 2) + pow(ry1 - ry2, 2));
+
+    return d2i(distance);
+}
+
+// Function to count non-zero elements in a 2D array
+int check_pts_num(const ST_IPOINT lane_pts[MAXP]) {
+    uint16_t count = 0;
+    // NONE or 0?
+    while (count &lt; MAXP &amp;&amp; (lane_pts[count].x != NONE || lane_pts[count].y != NONE)){
+        count++;
+    }
+    return count;
+}
+
+// Function to calculate the corner points of a rectangle
+void calculateCornerPoints(ST_RECTANGLE veh_state, ST_IPOINT &amp;corners[4]) {
+    double halfLength = i2d(veh_state.length)/2.0;
+    double halfWidth = i2d(veh_state.width)/2.0;
+    double angle = i2d(veh_state.orientation);
+
+    // Calculate the coordinates of each corner point based on the center, length, width, and orientation
+    corners[0].x = d2i(i2d(veh_state.center.x) + halfLength*cos(angle) - halfWidth*sin(angle));
+    corners[0].y = d2i(i2d(veh_state.center.y) + halfLength*sin(angle) + halfWidth*cos(angle));
+
+    corners[1].x = d2i(i2d(veh_state.center.x) + halfLength*cos(angle) + halfWidth*sin(angle));
+    corners[1].y = d2i(i2d(veh_state.center.y) + halfLength*sin(angle) - halfWidth*cos(angle));
+
+    corners[2].x = d2i(i2d(veh_state.center.x) - halfLength*cos(angle) + halfWidth*sin(angle));
+    corners[2].y = d2i(i2d(veh_state.center.y) - halfLength*sin(angle) - halfWidth*cos(angle));
+
+    corners[3].x = d2i(i2d(veh_state.center.x) - halfLength*cos(angle) - halfWidth*sin(angle));
+    corners[3].y = d2i(i2d(veh_state.center.y) - halfLength*sin(angle) + halfWidth*cos(angle));
+}
+
+// Checking if a point is inside a polygon
+bool point_in_polygon(ST_IPOINT point, ST_IPOINT polygon[4])
+{
+    int num_vertices = 4, i = 0;
+    int32_t x = point.x;
+    int32_t y = point.y;
+    double x_intersection;
+    bool inside = false;
+ 
+    // Store the first point in the polygon and initialize
+    // the second point
+    ST_IPOINT p1 = polygon[0], p2;
+ 
+    // Loop through each edge in the polygon
+    for (i = 1; i &lt;= num_vertices; i++) {
+        // Get the next point in the polygon
+        p2 = polygon[i % num_vertices];
+ 
+        // Check if the point is above the minimum y
+        // coordinate of the edge
+        if (y &gt; min(p1.y, p2.y)) {
+            // Check if the point is below the maximum y
+            // coordinate of the edge
+            if (y &lt;= max(p1.y, p2.y)) {
+                // Check if the point is to the left of the
+                // maximum x coordinate of the edge
+                if (x &lt;= max(p1.x, p2.x)) {
+                    // Calculate the x-intersection of the
+                    // line connecting the point to the edge
+                    x_intersection = (y - p1.y) * (p2.x - p1.x)/(p2.y - p1.y) + p1.x;
+ 
+                    // Check if the point is on the same
+                    // line as the edge or to the left of
+                    // the x-intersection
+                    if (p1.x == p2.x || x &lt;= x_intersection) {
+                        // Flip the inside flag
+                        inside = !inside;
+                    }
+                }
+            }
+        }
+ 
+        // Store the current point as the first point for
+        // the next iteration
+        p1 = p2;
+    }
+ 
+    // Return the value of the inside flag
+    return inside;
+}
+
+// check if veh_state are not covered by a single lane, or if vehicle rectangle touches the edge of the lane
+uint8_t check_inlane_lane_single(const ST_LANE lane, ST_RECTANGLE veh_state) {
+    uint8_t num_box = 0;
+    uint8_t i_box = 0, i_veh = 0;
+    uint8_t inlane_pts_num = 0;
+
+    ST_IPOINT veh_corners[4];
+    ST_IPOINT box_corners[4];
+    // Calculate the corner points
+    calculateCornerPoints(veh_state, veh_corners);
+
+    // check the number of points in the lane
+    num_box = check_pts_num(lane.left.points) - 1;
+    for (i_box = 0; i_box &lt; num_box &amp;&amp; inlane_pts_num &lt; 4; i_box++){
+        // define the corner of the road box
+        box_corners[0] = lane.right.points[i_box];
+        box_corners[1] = lane.right.points[i_box + 1];
+        box_corners[2] = lane.left.points[i_box + 1];
+        box_corners[3] = lane.left.points[i_box];
+        // check if the inlane status of the vehicle box to the current box
+        for(i_veh = 0; i_veh &lt; 4; i_veh++){
+            if(point_in_polygon(veh_corners[i_veh],box_corners)){
+                inlane_pts_num++;
+            }
+        }   
+    }
+
+    return inlane_pts_num;
+}
+
+bool check_inlane_laneNet(const ST_RECTANGLE veh_state) {
+    uint8_t i_lane = 0, inlane_pts_num = 0;
+    bool inside = false;
+
+    for(i_lane = 0; i_lane &lt; MAXL &amp;&amp; inlane_pts_num&lt;4; i_lane++){
+        inlane_pts_num += check_inlane_lane_single(laneNet[i_lane], veh_state);
+    }
+    
+    if(inlane_pts_num &gt;= 4) {
+        inside = true;
+    }
+    else {
+        inside = false;
+    }
+
+    return inside;
+}
+
+int32_t compute_approximating_circle_radius(int32_t ego_length, int32_t ego_width) {
+    double length = i2d(ego_length);
+    double width = i2d(ego_width);
+    double square_length, diagonal_square, approx_radius;
+
+    if (length &lt;= 0 || width &lt;= 0) {
+        return -1;
+    }
+
+    if (fabs(length) &lt; 1e-6 &amp;&amp; fabs(width) &lt; 1e-6) {
+        return 0;
+    }
+    // Divide rectangle into 3 smaller rectangles
+    square_length = length/3.0;
+    // Calculate minimum radius
+    diagonal_square = sqrt(pow(square_length/2.0, 2) + pow(width/2.0, 2));
+    // Round up value
+    approx_radius = round(diagonal_square*10.0) / 10.0 + 0.1;
+
+    return d2i(approx_radius);
+}
+
+void compute_centers_of_approximation_circles(ST_RECTANGLE veh_rect, ST_IPOINT &amp;centers[2]) {
+    double disc_radius, distance_centers, veh_cent_x_double, veh_cent_y_double;
+
+    disc_radius = i2d(compute_approximating_circle_radius(veh_rect.length, veh_rect.width));
+    distance_centers = disc_radius/2.0;
+
+    // Compute the center position of first circle (front)
+    veh_cent_x_double = i2d(veh_rect.center.x);
+    veh_cent_y_double = i2d(veh_rect.center.y);
+    centers[0].x = d2i(veh_cent_x_double + (distance_centers/2.0)*cos(i2d(veh_rect.orientation)));
+    centers[0].y = d2i(veh_cent_y_double + (distance_centers/2.0)*sin(i2d(veh_rect.orientation)));
+
+    // Compute the center position of second circle (rear)
+    centers[1].x = d2i(veh_cent_x_double - (distance_centers/2.0)*cos(i2d(veh_rect.orientation)));
+    centers[1].y = d2i(veh_cent_y_double - (distance_centers/2.0)*sin(i2d(veh_rect.orientation)));
+}
+
+bool check_collision(ST_RECTANGLE veh_st_rect1, ST_RECTANGLE veh_st_rect2, int32_t dis_thres) {    
+    // define two vehicles' circle tuple (front and rear)
+    ST_IPOINT veh_circle_tuple1[2] = {{0, 0}, {0, 0}};
+    ST_IPOINT veh_circle_tuple2[2] = {{0, 0}, {0, 0}};
+    double min_dis = FLT_MAX, dis = 0;
+    int i, j;    
+    
+    // calculate the centers of the vehicles' circles
+    compute_centers_of_approximation_circles(veh_st_rect1, veh_circle_tuple1);
+    compute_centers_of_approximation_circles(veh_st_rect2, veh_circle_tuple2);
+
+    for (i = 0; i &lt; 2; ++i) {
+        for (j = 0; j &lt; 2; ++j) {
+            dis = sqrt(pow(veh_circle_tuple1[i].x - veh_circle_tuple2[j].x, 2) + pow(veh_circle_tuple1[i].y - veh_circle_tuple2[j].y, 2));
+            min_dis = fmin(min_dis, dis);
+        }
+    }
+    if (dis_thres &gt; min_dis)
+        return true;
+    else
+        return false;
+}
+
+void updateAll(int32_t &amp;vx, int32_t &amp;vy, int32_t &amp;vv, int32_t &amp;vacc, int32_t &amp;vdir, 
+            const int32_t vaccRate, const int32_t vdirRate, const int8_t times){
+    int i = 0, LEN = 0;    
+    double rx=0,ry=0,rv=0,racc=0,rdir=0;
+    double dx=0,dy=0,dv=0,dacc=0,ddir=0;
+    double raccRate=0,rdirRate=0,step=0;
+    const double granularity = 0.01;
+    // assign the continuous variables with the discrete variables' values
+    rx = i2d(vx);
+    ry = i2d(vy);
+    rv = i2d(vv);
+    racc = i2d(vacc);
+    rdir = i2d(vdir);
+    raccRate = i2d(vaccRate);
+    rdirRate = i2d(vdirRate);
+    // setup the granularity for calculating integration
+    step = times*granularity;
+    LEN = fint(1/granularity);
+    // integration
+    for(i=0;i&lt;LEN;i++) {
+        dacc = raccRate * step;
+        ddir = rdirRate * step;
+        racc = racc + dacc;
+        rdir = rdir + ddir;
+        //rdir_mod = i2d(d2i(rdir)%PI);
+        dv = racc * step;
+        rv = rv + dv;
+        dx = rv * cos(rdir) * step;
+        rx = rx + dx;
+        dy = rv * sin(rdir) * step;
+        ry = ry + dy;
+    }
+    // update discrete variables with the continuous variables' values
+    vx = d2i(rx);
+    vy = d2i(ry);
+    vv = d2i(rv);
+    vacc = d2i(racc);
+    vdir = d2i(rdir);
+}
+
+void updateVA(int32_t &amp;vv, int32_t &amp;vacc, const int32_t vaccRate, const int8_t times){
+    int i = 0, LEN = 0;
+    double rx,ry,rv,racc;
+    double dx,dy,dv,dacc,raccRate,step;
+    const double granularity = 0.01;
+    // assign the continuous variables with the discrete variables' values
+    rv = i2d(vv);
+    racc = i2d(vacc);
+    raccRate = i2d(vaccRate);
+    // setup the granularity for calculating integration
+    step = times*granularity;
+    LEN = fint(1/granularity);
+    // integration
+    for(i=0;i&lt;LEN;i++) {
+        dacc = raccRate * step;
+        racc = racc + dacc;
+        dv = racc * step;
+        rv = rv + dv;
+    }
+    // update discrete variables with the continuous variables' values
+    vv = d2i(rv);
+    vacc = d2i(racc);
+}
+
+void detect(){
+    int i = 0;
+    int32_t distance = 0;
+
+    for(i = 0; i &lt; MAXOBS; i++){
+        distance = getDisP2P(cps_i_state.position, obs_i_state[i].position);
+        if(distance &lt;= d2i(RADAR)){
+            cps_i_state.detection.collide |= check_collision(cps_shape, obs_shape[i], d2i(THRESHOLD));
+        }
+    }
+    cps_i_state.detection.outside = !check_inlane_laneNet(cps_shape);
+    cps_i_state.detection.reach = (getDisP2P(cps_shape.center, planning.goal) &lt;= d2i(THRESHOLD));
+    if(staticObsExists) {
+        for(i = 0; i &lt; MAXSO; i++) {
+            cps_i_state.detection.collide |= check_collision(cps_shape, staticObs[i], d2i(THRESHOLD));
+        }
+    }
+    if(cps_i_state.detection.outside || cps_i_state.detection.collide || cps_i_state.detection.reach) {
+        // end of the game
+        count = MAXTIME;
+    }
+}
+
+bool isSafe(){
+    int32_t i = 0;
+    bool re_safe = true;
+
+    for(i = 0; i &lt; MAXOBS &amp;&amp; re_safe; i++){
+        re_safe = getDisP2P(cps_i_state.position, obs_i_state[i].position) &gt; d2i(3*THRESHOLD);
+        re_safe &amp;= check_inlane_laneNet(cps_shape);
+    }
+
+    return re_safe;
+}
+
+bool isProgress(){
+    int32_t dis = 0;
+    bool re_progress = false;
+
+    dis = getDisP2P(cps_shape.center, planning.goal);
+    if(dis &lt; distanceToGoal){
+        re_progress = true;
+    }
+    distanceToGoal = dis;
+
+    return re_progress;
+}
+
+bool isComfort(){
+    bool re_comfort = (cps_i_state.acceleration &lt; MAX_ACC/2 &amp;&amp; cps_i_state.acceleration &gt; MIN_ACC/2) &amp;&amp;
+                    (cps_i_state.orientation &lt; PI/4 &amp;&amp; cps_i_state.orientation &gt; -PI/4);
+
+    return re_comfort;
+}</declaration>
+	<template>
+		<name x="5" y="5">Act_Move</name>
+		<parameter>const act_id_t id</parameter>
+		<declaration>void act(){
+    if(cps_i_state.accRate &gt; MAX_ACC){
+        cps_i_state.accRate = MAX_ACC;
+    }
+    if(cps_i_state.accRate &lt; MIN_ACC){
+        cps_i_state.accRate = MIN_ACC;
+    }
+}</declaration>
+		<location id="id0" x="-204" y="0">
+			<name x="-221" y="17">Wait</name>
+		</location>
+		<location id="id1" x="-68" y="0">
+			<name x="-102" y="17">Choose</name>
+			<committed/>
+		</location>
+		<init ref="id0"/>
+		<transition id="id2">
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<label kind="assignment" x="-161" y="-51">act()</label>
+			<nail x="-68" y="-68"/>
+			<nail x="-204" y="-68"/>
+		</transition>
+		<transition id="id3">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="synchronisation" x="-178" y="-25">perform[id]?</label>
+		</transition>
+	</template>
+	<template>
+		<name>Act_Turn</name>
+		<parameter>const act_id_t id</parameter>
+		<declaration>void laneKeeping(){
+    cps_i_state.yawRate = d2i(0.0);
+}</declaration>
+		<location id="id4" x="170" y="102">
+			<name x="136" y="119">Choose</name>
+			<committed/>
+		</location>
+		<location id="id5" x="34" y="102">
+			<name x="17" y="119">Wait</name>
+		</location>
+		<init ref="id5"/>
+		<transition id="id6">
+			<source ref="id4"/>
+			<target ref="id5"/>
+			<label kind="assignment" x="76" y="51">laneKeeping()</label>
+			<nail x="170" y="34"/>
+			<nail x="34" y="34"/>
+		</transition>
+		<transition id="id7">
+			<source ref="id5"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="59" y="76">perform[id]?</label>
+		</transition>
+	</template>
+	<template>
+		<name>Controller</name>
+		<parameter>const int[0,MAXL] initLane, const ST_DSTATE &amp;initCS, const ST_RECTANGLE &amp;shape, const ST_RULES &amp;rules</parameter>
+		<declaration>act_id_t actID = 0;
+
+// === ISO 15622 ACC 参数 ===
+const double ACC_V_SET    = 30.0;
+const double ACC_T_HW     = 1.8;
+const double ACC_S0       = 2.0;
+const double ACC_A_MAX    = 1.5;
+const double ACC_COMFORT_BRAKE = -2.0;
+const double ACC_EMERGENCY_BRAKE = -1.5;
+const double ACC_BRAKE_RATE = 0.3;
+const double ACC_REACTION_TIME = 3.0;
+const double ACC_DANGER_TTC = 1.0;
+const double ACC_WARNING_TTC = 2.0;
+const double ACC_APPROACH_DIST = 80.0;
+const double ACC_P_GAIN   = 0.4;
+
+int drivingMode = 0;
+int reactionStep = 0;
+bool dangerDetected = false;
+
+// === ISO 15622 ACC 辅助函数 ===
+double clamp_double(double val, double lo, double hi) {
+    if (val &lt; lo) return lo;
+    if (val &gt; hi) return hi;
+    return val;
+}
+
+void findVehicleAhead(double &amp;gap, double &amp;vLead) {
+    int i = 0;
+    double minDist = 1000000.0;
+    double egoX = 0.0, egoY = 0.0, obsX = 0.0, obsY = 0.0;
+    double egoDirX = 0.0, egoDirY = 0.0;
+    double projDist = 0.0, absDist = 0.0;
+
+    gap = 1000000.0;
+    vLead = 0.0;
+
+    egoX = i2d(cps_i_state.position.x);
+    egoY = i2d(cps_i_state.position.y);
+    egoDirX = cos(i2d(cps_i_state.orientation));
+    egoDirY = sin(i2d(cps_i_state.orientation));
+
+    for (i = 0; i &lt; MAXOBS; i++) {
+        obsX = i2d(obs_i_state[i].position.x);
+        obsY = i2d(obs_i_state[i].position.y);
+
+        projDist = (obsX - egoX) * egoDirX + (obsY - egoY) * egoDirY;
+
+        if (projDist &gt; 0 &amp;&amp; projDist &lt; minDist) {
+            minDist = projDist;
+            absDist = sqrt(pow(obsX - egoX, 2.0) + pow(obsY - egoY, 2.0));
+            gap = absDist;
+            vLead = i2d(obs_i_state[i].velocity);
+        }
+    }
+}
+
+void initDis() {
+    ST_IPOINT leftTop = laneNet[initLane].left.points[0];
+    ST_IPOINT rightTop = laneNet[initLane].left.points[MAXP-1];
+    ST_IPOINT rightDown = laneNet[initLane].right.points[0];
+    ST_IPOINT leftDown = laneNet[initLane].right.points[MAXP-1];
+    ST_IPOINT middleDStart, middleDEnd;
+    ST_IPOINT start;
+    int32_t diffX = 0, diffY = 0;
+    double xs, ys, xe, ye, angle;
+
+    diffX = leftDown.x - leftTop.x;
+    diffY = leftDown.y - leftTop.y;
+    middleDStart.x = leftTop.x + diffX/2;
+    middleDStart.y = leftTop.y + diffY/2;
+    diffX = rightDown.x - rightTop.x;
+    diffY = rightDown.y - rightTop.y;
+    middleDEnd.x = rightTop.x + diffX/2;
+    middleDEnd.y = rightTop.y + diffY/2;
+    
+    xs = i2d(middleDStart.x);
+    ys = i2d(middleDStart.y);
+    xe = i2d(middleDEnd.x);
+    ye = i2d(middleDEnd.y);
+
+    angle = atan2(ys-ye,xs-xe);
+
+    if(initCS.position.x != NONE || initCS.position.y != NONE){
+        start.x = d2i(initCS.position.x);
+        start.y = d2i(initCS.position.y);
+        angle = initCS.orientation;
+    }else{
+        start = middleDStart;
+    }
+
+    cps_i_state.position = start;
+    cps_i_state.velocity = d2i(mTimeStep(initCS.velocity));
+    cps_i_state.orientation = d2i(angle);
+    cps_i_state.acceleration = d2i(mTimeStep(initCS.acceleration));
+    cps_i_state.accRate = d2i(mTimeStep(initCS.accRate));
+    cps_i_state.yawRate = d2i(mTimeStep(initCS.yawRate));
+    cps_i_state.detection.collide = false;
+    cps_i_state.detection.outside = false;
+    cps_i_state.detection.reach = false;
+
+    drivingMode = 0;
+    reactionStep = 0;
+    dangerDetected = false;
+
+    distanceToGoal = getDisP2P(cps_shape.center, planning.goal);
+
+    cps_dynamic.x = i2d(start.x);
+    cps_dynamic.y = i2d(start.y);
+    cps_dynamic.velocity = mTimeStep(initCS.velocity);
+    cps_dynamic.orientation = angle;
+    cps_dynamic.acceleration = mTimeStep(initCS.acceleration);
+
+    rSafe = 0;
+    rProgress = 0;
+    rComfort = 0;
+    rCost = 0;
+}
+
+void followShape(){
+    cps_shape = shape;
+    cps_shape.center = cps_i_state.position;
+    cps_shape.orientation = cps_i_state.orientation;
+}
+
+void initialize(){
+    initDis();
+    followShape();
+}
+
+void sensor(){
+    int i = 0;
+
+    updateAll(cps_i_state.position.x,cps_i_state.position.y,cps_i_state.velocity,cps_i_state.acceleration,cps_i_state.orientation,
+           cps_i_state.accRate,cps_i_state.yawRate,P*N1);
+    followShape();
+    detect();
+}
+
+void makeDecision(){
+    double gap = 1000000.0;
+    double vLead = 0.0;
+    double vEgo = 0.0;
+    double ttc = 999.0;
+    double targetAcc = 0.0;
+    double currentAcc = 0.0;
+    double accStep = 0.0;
+    double desiredGap = 0.0;
+    double gapRatio = 0.0;
+    double gapError = 0.0;
+    double relVel = 0.0;
+
+    vEgo = i2d(cps_i_state.velocity);
+    findVehicleAhead(gap, vLead);
+    currentAcc = i2d(cps_i_state.acceleration);
+
+    // 计算 TTC
+    if (vEgo &gt; vLead + 0.1) {
+        ttc = gap / (vEgo - vLead);
+    } else {
+        ttc = 999.0;
+    }
+
+    // 层1: 反应延迟
+    if (ttc &lt; ACC_WARNING_TTC) {
+        if (!dangerDetected) {
+            dangerDetected = true;
+            reactionStep = 0;
+        }
+        reactionStep++;
+    } else {
+        dangerDetected = false;
+        reactionStep = 0;
+    }
+
+    if (dangerDetected &amp;&amp; reactionStep * 0.1 &lt; ACC_REACTION_TIME) {
+        cps_i_state.accRate = d2i(0.0);
+        return;
+    }
+
+    // 层2: 四模式决策
+    desiredGap = ACC_S0 + vEgo * ACC_T_HW;
+
+    if (gap &gt; ACC_APPROACH_DIST) {
+        drivingMode = 0;
+        if (vEgo &lt; ACC_V_SET) {
+            targetAcc = ACC_A_MAX;
+        } else {
+            targetAcc = 0.0;
+        }
+    } else if (gap &gt; desiredGap + 5.0) {
+        drivingMode = 1;
+        gapRatio = (ACC_APPROACH_DIST - gap) / (ACC_APPROACH_DIST - desiredGap - 5.0);
+        gapRatio = clamp_double(gapRatio, 0.0, 1.0);
+        targetAcc = -gapRatio * 2.0;
+        if (vEgo &lt; vLead) {
+            targetAcc = 0.0;
+        }
+    } else if (gap &gt; ACC_S0) {
+        drivingMode = 2;
+        gapError = gap - desiredGap;
+        relVel = vEgo - vLead;
+        targetAcc = ACC_P_GAIN * gapError - 0.5 * relVel;
+        if (targetAcc &lt; ACC_COMFORT_BRAKE) {
+            targetAcc = ACC_COMFORT_BRAKE;
+        }
+        if (targetAcc &gt; ACC_A_MAX) {
+            targetAcc = ACC_A_MAX;
+        }
+    } else {
+        drivingMode = 3;
+        targetAcc = ACC_EMERGENCY_BRAKE;
+    }
+
+    // 层3: 紧急制动覆盖
+    if (ttc &lt; ACC_DANGER_TTC) {
+        drivingMode = 3;
+        targetAcc = ACC_EMERGENCY_BRAKE;
+    } else if (ttc &lt; ACC_WARNING_TTC &amp;&amp; drivingMode != 2) {
+        if (targetAcc &gt; ACC_COMFORT_BRAKE) {
+            targetAcc = ACC_COMFORT_BRAKE;
+        }
+    }
+
+    // 渐进刹车
+    accStep = ACC_BRAKE_RATE * 0.1;
+    if (targetAcc &lt; currentAcc - accStep) {
+        cps_i_state.acceleration = d2i(currentAcc - accStep);
+    } else if (targetAcc &gt; currentAcc + accStep) {
+        cps_i_state.acceleration = d2i(currentAcc + accStep);
+    } else {
+        cps_i_state.acceleration = d2i(targetAcc);
+    }
+
+    if (vEgo &lt;= 0.0 &amp;&amp; cps_i_state.acceleration &lt; d2i(0.0)) {
+        cps_i_state.acceleration = d2i(0.0);
+    }
+
+    cps_i_state.accRate = d2i(0.0);
+}
+
+void reload(){
+    makeDecision();
+    actID = 0;
+}
+</declaration>
+		<location id="id8" x="68" y="0">
+			<name x="25" y="-34">Choose</name>
+			<committed/>
+		</location>
+		<location id="id9" x="-136" y="0">
+			<name x="-195" y="-34">Acting</name>
+		</location>
+		<location id="id10" x="-17" y="-85">
+			<name x="-27" y="-119">M1</name>
+			<urgent/>
+		</location>
+		<location id="id11" x="-42" y="0">
+			<name x="-59" y="-42">Ini</name>
+		</location>
+		<init ref="id11"/>
+		<transition id="id12">
+			<source ref="id10"/>
+			<target ref="id8"/>
+			<label kind="guard" x="-76" y="-68">actID&lt;MAXACT-1</label>
+			<nail x="-17" y="0"/>
+		</transition>
+		<transition id="id13" controllable="false">
+			<source ref="id11"/>
+			<target ref="id9"/>
+			<label kind="synchronisation" x="-102" y="-25">start?</label>
+			<label kind="assignment" x="-119" y="17">initialize()</label>
+		</transition>
+		<transition id="id14">
+			<source ref="id10"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-170" y="-102">actID==MAXACT-1</label>
+			<label kind="synchronisation" x="-170" y="-119">perform[actID]!</label>
+			<label kind="assignment" x="-170" y="-85">reload()</label>
+			<nail x="-136" y="-85"/>
+		</transition>
+		<transition id="id15" controllable="false">
+			<source ref="id9"/>
+			<target ref="id9"/>
+			<label kind="synchronisation" x="-195" y="-17">sense?</label>
+			<label kind="assignment" x="-195" y="17">sensor()</label>
+			<nail x="-170" y="0"/>
+			<nail x="-170" y="25"/>
+		</transition>
+		<transition id="id16" controllable="false">
+			<source ref="id9"/>
+			<target ref="id8"/>
+			<label kind="synchronisation" x="-85" y="51">decide?</label>
+			<nail x="-136" y="68"/>
+			<nail x="68" y="68"/>
+		</transition>
+		<transition id="id17">
+			<source ref="id8"/>
+			<target ref="id10"/>
+			<label kind="synchronisation" x="8" y="-119">perform[actID]!</label>
+			<label kind="assignment" x="8" y="-102">actID++</label>
+			<nail x="68" y="-85"/>
+		</transition>
+	</template>
+	<template>
+		<name>Timer</name>
+		<declaration>clock t;
+
+bool ToDecide(){
+    if(distanceToGoal &lt;= 2*cps_i_state.velocity){
+        return count%N1==0 &amp;&amp; count%MAXTIME!=0;
+    }
+    return count == 1 || (count%N2==0 &amp;&amp; count%MAXTIME!=0);
+}
+
+bool ToEnd(){
+    return count%MAXTIME==0;
+}</declaration>
+		<location id="id18" x="-68" y="0">
+			<name x="-102" y="-51">Counting</name>
+			<label kind="invariant" x="-59" y="8">t&lt;=P</label>
+		</location>
+		<location id="id19" x="136" y="0">
+			<name x="110" y="-51">Judge</name>
+			<urgent/>
+		</location>
+		<location id="id20" x="-136" y="0">
+			<urgent/>
+		</location>
+		<location id="id21" x="238" y="0">
+			<name x="221" y="-34">Done</name>
+		</location>
+		<init ref="id20"/>
+		<transition id="id22" controllable="false">
+			<source ref="id19"/>
+			<target ref="id21"/>
+			<label kind="guard" x="153" y="-25">ToEnd()</label>
+			<label kind="synchronisation" x="161" y="0">end!</label>
+		</transition>
+		<transition id="id23" controllable="false">
+			<source ref="id20"/>
+			<target ref="id18"/>
+			<label kind="synchronisation" x="-127" y="8">start!</label>
+		</transition>
+		<transition id="id24" controllable="false">
+			<source ref="id19"/>
+			<target ref="id18"/>
+			<label kind="guard" x="-51" y="42">!ToEnd()&amp;&amp;ToDecide()</label>
+			<label kind="synchronisation" x="0" y="25">decide!</label>
+			<nail x="136" y="68"/>
+			<nail x="-68" y="68"/>
+		</transition>
+		<transition id="id25" controllable="false">
+			<source ref="id19"/>
+			<target ref="id18"/>
+			<label kind="guard" x="-51" y="-25">!ToEnd()&amp;&amp;!ToDecide()</label>
+		</transition>
+		<transition id="id26" controllable="false">
+			<source ref="id18"/>
+			<target ref="id19"/>
+			<label kind="guard" x="-59" y="-85">t&gt;=P</label>
+			<label kind="synchronisation" x="-8" y="-85">sense!</label>
+			<label kind="assignment" x="59" y="-85">t=0,count++</label>
+			<nail x="-68" y="-68"/>
+			<nail x="136" y="-68"/>
+		</transition>
+	</template>
+	<template>
+		<name>Dynamics</name>
+		<location id="id27" x="95" y="0">
+			<name x="83" y="-34">S1</name>
+			<label kind="invariant" x="-272" y="136">cps_dynamic.x'==0 &amp;&amp;
+cps_dynamic.y'==0 &amp;&amp;
+cps_dynamic.velocity'==0 &amp;&amp;
+cps_dynamic.acceleration'==0 &amp;&amp;
+cps_dynamic.orientation'==0</label>
+		</location>
+		<location id="id28" x="0" y="0">
+			<name x="-10" y="-34">S0</name>
+			<label kind="invariant" x="-272" y="25">cps_dynamic.x'==cos(cps_dynamic.orientation)*cps_dynamic.velocity &amp;&amp;
+cps_dynamic.y'==sin(cps_dynamic.orientation)*cps_dynamic.velocity &amp;&amp;
+cps_dynamic.velocity'==cps_dynamic.acceleration &amp;&amp;
+cps_dynamic.acceleration'==i2d(cps_i_state.accRate) &amp;&amp;
+cps_dynamic.orientation'==i2d(cps_i_state.yawRate)</label>
+		</location>
+		<init ref="id28"/>
+		<transition id="id29" controllable="false">
+			<source ref="id28"/>
+			<target ref="id27"/>
+			<label kind="synchronisation" x="25" y="-25">end?</label>
+		</transition>
+	</template>
+	<template>
+		<name>Obstacle</name>
+		<parameter>const obs_id_t id, const ST_DSTATE &amp;initCS, const ST_RECTANGLE &amp;shape, const ST_OBEHAVIOR &amp;behavior</parameter>
+		<declaration>const int32_t OBS_DECISION_PERIOD = 4;
+	uint8_t pc = 0;
+	uint8_t tc = 0;
+
+	void followShape(){
+	    obs_shape[id].center = obs_i_state[id].position;
+	    obs_shape[id].orientation = obs_i_state[id].orientation;
+	}
+
+	// Longitudinal action: 0=brake, 1=cruise, 2=accelerate
+	int[0,2] chooseLonAction() {
+	    int[0,2] action;
+	    // No init — UPPAAL exhausts all {0,1,2}
+	    return action;
+	}
+
+	// Lateral action: -1=left, 0=stay, 1=right
+	int[-1,1] chooseLatAction() {
+	    int[-1,1] action;
+	    // No init — UPPAAL exhausts all {-1,0,1}
+	    return action;
+	}
+
+	void applyAction(int[0,2] lon, int[-1,1] lat) {
+	    double step = mTimeStep(1.0);
+
+	    // Longitudinal execution
+	    if (lon == 0) {
+	        obs_i_state[id].acceleration = d2i(-i2d(behavior.decMax));
+	    } else if (lon == 1) {
+	        obs_i_state[id].acceleration = d2i(0.0);
+	    } else {
+	        obs_i_state[id].acceleration = d2i(i2d(behavior.accMax));
+	    }
+
+	    // Lateral execution via yawRate
+	    if (lat == -1) {
+	        obs_i_state[id].yawRate = d2i(-1.0);
+	    } else if (lat == 1) {
+	        obs_i_state[id].yawRate = d2i(1.0);
+	    } else {
+	        obs_i_state[id].yawRate = d2i(0.0);
+	    }
+
+	    // Apply acceleration to velocity
+	    obs_i_state[id].velocity = obs_i_state[id].velocity +
+	        d2i(i2d(obs_i_state[id].acceleration) * step);
+
+	    // Velocity limits
+	    if (obs_i_state[id].velocity &gt; behavior.vMax) {
+	        obs_i_state[id].velocity = behavior.vMax;
+	    }
+	    if (obs_i_state[id].velocity &lt; behavior.vMin) {
+	        obs_i_state[id].velocity = behavior.vMin;
+	    }
+	    if (obs_i_state[id].velocity &lt; d2i(0.0)) {
+	        obs_i_state[id].velocity = d2i(0.0);
+	    }
+	}
+
+	void decisionMaking() {
+	    int[0,2] lon;
+	    int[-1,1] lat;
+	    lon = chooseLonAction();
+	    lat = chooseLatAction();
+	    applyAction(lon, lat);
+	}
+
+	void initCon() {
+	    obs_dynamic[id].x = initCS.position.x;
+	    obs_dynamic[id].y = initCS.position.y;
+	    obs_dynamic[id].velocity = mTimeStep(initCS.velocity);
+	    obs_dynamic[id].orientation = initCS.orientation;
+	}
+
+	void initDis() {
+	    obs_i_state[id].position.x = d2i(initCS.position.x);
+	    obs_i_state[id].position.y = d2i(initCS.position.y);
+	    obs_i_state[id].velocity = d2i(mTimeStep(initCS.velocity));
+	    obs_i_state[id].orientation = d2i(initCS.orientation);
+	    obs_i_state[id].acceleration = d2i(0.0);
+	    obs_i_state[id].yawRate = d2i(0.0);
+	}
+
+	void updateDis() {
+	    double vx = 0.0, vy = 0.0;
+	    double rVelocity = 0.0;
+	    double rOrientation = 0.0;
+	    int32_t dVx = 0, dVy = 0;
+
+	    rVelocity = i2d(obs_i_state[id].velocity);
+	    rOrientation = i2d(obs_i_state[id].orientation);
+	    vx = rVelocity*cos(rOrientation);
+	    vy = rVelocity*sin(rOrientation);
+	    dVx = d2i(vx);
+	    dVy = d2i(vy);
+	    obs_i_state[id].position.x = obs_i_state[id].position.x + dVx * P*N1;
+	    obs_i_state[id].position.y = obs_i_state[id].position.y + dVy * P*N1;
+	    followShape();
+	}
+
+	void initialize() {
+	    pc = 0;
+	    tc = 0;
+	    initDis();
+	    initCon();
+	    obs_shape[id] = shape;
+	    followShape();
+	}
+
+	void change(){
+	    updateDis();
+	    if (tc % OBS_DECISION_PERIOD == 0) {
+	        decisionMaking();
+	    }
+	    tc++;
+	}</declaration>
+		<location id="id30" x="119" y="0">
+			<name x="109" y="-34">S1</name>
+			<label kind="invariant" x="-323" y="136">obs_dynamic[id].x&#x27;==0 &amp;&amp;
+obs_dynamic[id].y&#x27;==0 &amp;&amp;
+obs_dynamic[id].velocity&#x27;==0 &amp;&amp;
+obs_dynamic[id].acceleration&#x27;==0 &amp;&amp;
+obs_dynamic[id].orientation&#x27;==0</label>
+		</location>
+		<location id="id31" x="0" y="0">
+			<name x="-10" y="-34">S0</name>
+			<label kind="invariant" x="-323" y="25">obs_dynamic[id].x&#x27;==cos(i2d(obs_i_state[id].orientation))*i2d(obs_i_state[id].velocity)&amp;&amp;
+obs_dynamic[id].y&#x27;==sin(i2d(obs_i_state[id].orientation))*i2d(obs_i_state[id].velocity)&amp;&amp;
+obs_dynamic[id].velocity&#x27;==0 &amp;&amp;
+obs_dynamic[id].acceleration&#x27;==0 &amp;&amp;
+obs_dynamic[id].orientation&#x27;==0</label>
+			<label kind="comments" x="-144" y="-102">Obstacle with behavioral automaton</label>
+		</location>
+		<init ref="id31"/>
+		<transition id="id32" controllable="false">
+			<source ref="id31"/>
+			<target ref="id30"/>
+			<label kind="synchronisation" x="42" y="-17">end?</label>
+		</transition>
+		<transition id="id33" controllable="false">
+			<source ref="id31"/>
+			<target ref="id31"/>
+			<label kind="synchronisation" x="25" y="-68">sense?</label>
+			<label kind="assignment" x="25" y="-51">change()</label>
+			<nail x="34" y="-34"/>
+			<nail x="68" y="-34"/>
+		</transition>
+		<transition id="id34" controllable="false">
+			<source ref="id31"/>
+			<target ref="id31"/>
+			<label kind="synchronisation" x="-102" y="-68">start?</label>
+			<label kind="assignment" x="-102" y="-51">initialize()</label>
+			<nail x="-34" y="-34"/>
+			<nail x="-68" y="-34"/>
+		</transition>
+	</template>
+	<template>
+		<name>Rewards</name>
+		<declaration>int[-100,100] FSAFE = 0;     //rate of reward safe
+int[-100,100] FCOMFORT = 0;  //rate of reward comfort
+int[-100,100] FPROGRESS = 0; //rate of reward progress
+
+void penalty(){
+    bool re_safe = false;
+    bool re_comfort = false;
+    bool re_progress = false;
+
+    re_safe = isSafe();
+    re_progress = isProgress();
+    re_comfort = isComfort();
+
+    //normal
+    if(re_safe &amp;&amp; re_progress &amp;&amp; re_comfort){
+        FSAFE = 1;
+        FCOMFORT = 1;
+        FPROGRESS = 1;
+    }
+    //unsafe
+    if(!re_safe){
+        FSAFE = -10;
+        FCOMFORT = 0;
+        FPROGRESS = 0;
+    }
+    //no progress
+    if(re_safe &amp;&amp; !re_progress){
+        FSAFE = 1;
+        FCOMFORT = 1;
+        FPROGRESS = -10;
+    }
+    //discomfort
+    if(re_safe &amp;&amp; re_progress &amp;&amp; !re_comfort){
+        FSAFE = 1;
+        FCOMFORT = -10;
+        FPROGRESS = 1;
+    }
+
+    if(cps_i_state.detection.collide || cps_i_state.detection.outside){
+        FSAFE = -100;
+    }
+    if(cps_i_state.detection.reach){
+        FPROGRESS = 100;
+    }
+
+    reward = 10*re_safe+re_comfort+(5+100*cps_i_state.detection.reach)*re_progress;
+}
+
+void terminate(){
+    if(!cps_i_state.detection.reach){
+        FPROGRESS = -100;
+        reward -= 100;
+    }else{
+        FPROGRESS = 100;  
+        reward += 100;      
+    }
+}</declaration>
+		<location id="id35" x="0" y="0">
+			<label kind="invariant" x="42" y="-42">rSafe'==FSAFE&amp;&amp;
+rComfort'==FCOMFORT&amp;&amp;
+rProgress'==FPROGRESS&amp;&amp;
+rCost'==0</label>
+		</location>
+		<init ref="id35"/>
+		<transition id="id36" controllable="false">
+			<source ref="id35"/>
+			<target ref="id35"/>
+			<label kind="synchronisation" x="-16" y="17">end?</label>
+			<label kind="assignment" x="-34" y="34">terminate()</label>
+			<nail x="-34" y="34"/>
+			<nail x="34" y="34"/>
+		</transition>
+		<transition id="id37" controllable="false">
+			<source ref="id35"/>
+			<target ref="id35"/>
+			<label kind="synchronisation" x="-25" y="-68">sense?</label>
+			<label kind="assignment" x="-34" y="-51">penalty()</label>
+			<nail x="-34" y="-34"/>
+			<nail x="34" y="-34"/>
+		</transition>
+	</template>
+	<system>// Generated moving obstacles starts
+const ST_DSTATE initCS0 = {{15.0, 0.0}, 25.0, 0.08, 0.0, 0.0, 0.0};
+const ST_RECTANGLE shapeObs0 = {{150, 0}, 20, 45, 0};
+const ST_OBEHAVIOR obsBehavior0 = {d2i(12.5), d2i(42.5), d2i(3.0), d2i(6.0), d2i(0.3), d2i(50.0), d2i(0.0)};
+obs0 = Obstacle(0, initCS0, shapeObs0, obsBehavior0);
+// Generated moving obstacles ends
+
+// Generated ego vehicle starts
+const ST_DSTATE initEgo = {{0.0, 3.45}, 20.0, 0.0, 0.0, 0.0, 0.0};
+const ST_RECTANGLE initShapeEgo = {{0, 34}, 10, 45, 0};
+const ST_RULES rules = {d2i(4.0), 0, d2i(0.2), d2i(-0.2)};
+const int[0,MAXL] initLane = 1;
+move = Act_Move(0);
+turn = Act_Turn(1);
+controller = Controller(initLane,initEgo,initShapeEgo,rules);
+timer = Timer();
+dynamics = Dynamics();
+rewardMachine = Rewards();
+// Generated ego vehicle ends
+
+// Generated model instances starts
+system timer, obs0, move, turn, controller, dynamics, rewardMachine;
+// Generated model instances ends
+</system>
+	<queries><query><formula>A[] !cps_i_state.detection.collide</formula><comment/></query></queries>
+</nta>

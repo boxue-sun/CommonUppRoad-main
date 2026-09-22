@@ -437,6 +437,61 @@ bool isComfort(){
 		<parameter>const int[0,MAXL] initLane, const ST_DSTATE &amp;initCS, const ST_RECTANGLE &amp;shape, const ST_RULES &amp;rules</parameter>
 		<declaration>act_id_t actID = 0;
 
+// === ISO 15622 ACC 参数 ===
+const double ACC_V_SET    = 30.0;
+const double ACC_T_HW     = 1.8;
+const double ACC_S0       = 2.0;
+const double ACC_A_MAX    = 1.5;
+const double ACC_COMFORT_BRAKE = -2.0;
+const double ACC_EMERGENCY_BRAKE = -1.5;
+const double ACC_BRAKE_RATE = 0.3;
+const double ACC_REACTION_TIME = 3.0;
+const double ACC_DANGER_TTC = 1.0;
+const double ACC_WARNING_TTC = 2.0;
+const double ACC_APPROACH_DIST = 80.0;
+const double ACC_P_GAIN   = 0.4;
+
+int drivingMode = 0;
+int reactionStep = 0;
+bool dangerDetected = false;
+
+// === ISO 15622 ACC 辅助函数 ===
+double clamp_double(double val, double lo, double hi) {
+    if (val &lt; lo) return lo;
+    if (val &gt; hi) return hi;
+    return val;
+}
+
+void findVehicleAhead(double &amp;gap, double &amp;vLead) {
+    int i = 0;
+    double minDist = 1000000.0;
+    double egoX = 0.0, egoY = 0.0, obsX = 0.0, obsY = 0.0;
+    double egoDirX = 0.0, egoDirY = 0.0;
+    double projDist = 0.0, absDist = 0.0;
+
+    gap = 1000000.0;
+    vLead = 0.0;
+
+    egoX = i2d(cps_i_state.position.x);
+    egoY = i2d(cps_i_state.position.y);
+    egoDirX = cos(i2d(cps_i_state.orientation));
+    egoDirY = sin(i2d(cps_i_state.orientation));
+
+    for (i = 0; i &lt; MAXOBS; i++) {
+        obsX = i2d(obs_i_state[i].position.x);
+        obsY = i2d(obs_i_state[i].position.y);
+
+        projDist = (obsX - egoX) * egoDirX + (obsY - egoY) * egoDirY;
+
+        if (projDist &gt; 0 &amp;&amp; projDist &lt; minDist) {
+            minDist = projDist;
+            absDist = sqrt(pow(obsX - egoX, 2.0) + pow(obsY - egoY, 2.0));
+            gap = absDist;
+            vLead = i2d(obs_i_state[i].velocity);
+        }
+    }
+}
+
 void initDis() {
     ST_IPOINT leftTop = laneNet[initLane].left.points[0];
     ST_IPOINT rightTop = laneNet[initLane].left.points[MAXP-1];
@@ -481,6 +536,10 @@ void initDis() {
     cps_i_state.detection.outside = false;
     cps_i_state.detection.reach = false;
 
+    drivingMode = 0;
+    reactionStep = 0;
+    dangerDetected = false;
+
     distanceToGoal = getDisP2P(cps_shape.center, planning.goal);
 
     cps_dynamic.x = i2d(start.x);
@@ -515,74 +574,106 @@ void sensor(){
     detect();
 }
 
-// === IDM 参数 ===
-const double IDM_V0 = 30.0;       // 期望速度 m/s
-const double IDM_T = 1.5;         // 安全时距 s
-const double IDM_S0 = 2.0;        // 最小间距 m
-const double IDM_A_MAX = 2.0;     // 最大加速度 m/s²
-const double IDM_B_COMF = 1.5;    // 舒适减速度 m/s²
-const double IDM_DELTA = 4.0;     // 加速度指数
-
-void findVehicleAhead(double &amp;gap, double &amp;vLead) {
-    int i = 0;
-    double minDist = 1000000.0;
-    double egoX = 0.0, egoY = 0.0, obsX = 0.0, obsY = 0.0;
-    double egoDirX = 0.0, egoDirY = 0.0;
-    double projDist = 0.0, absDist = 0.0;
-
-    gap = 1000000.0;
-    vLead = 0.0;
-
-    egoX = i2d(cps_i_state.position.x);
-    egoY = i2d(cps_i_state.position.y);
-    egoDirX = cos(i2d(cps_i_state.orientation));
-    egoDirY = sin(i2d(cps_i_state.orientation));
-
-    for (i = 0; i &lt; MAXOBS; i++) {
-        obsX = i2d(obs_i_state[i].position.x);
-        obsY = i2d(obs_i_state[i].position.y);
-
-        projDist = (obsX - egoX) * egoDirX + (obsY - egoY) * egoDirY;
-
-        if (projDist &gt; 0 &amp;&amp; projDist &lt; minDist) {
-            minDist = projDist;
-            absDist = sqrt(pow(obsX - egoX, 2.0) + pow(obsY - egoY, 2.0));
-            gap = absDist;
-            vLead = i2d(obs_i_state[i].velocity);
-        }
-    }
-}
-
-double computeIDM(double v, double vLead, double gap) {
-    double s_star = 0.0;
-    double acc = 0.0;
-    double vRatio = 0.0;
-    double gapRatio = 0.0;
-
-    vRatio = v / IDM_V0;
-    s_star = IDM_S0 + v * IDM_T +
-             v * (v - vLead) / (2.0 * sqrt(IDM_A_MAX * IDM_B_COMF));
-
-    if (gap &lt; 0.001) {
-        gap = 0.001;
-    }
-    gapRatio = s_star / gap;
-
-    acc = IDM_A_MAX * (1.0 - pow(vRatio, IDM_DELTA) - pow(gapRatio, 2.0));
-
-    return acc;
-}
-
 void makeDecision(){
     double gap = 1000000.0;
     double vLead = 0.0;
     double vEgo = 0.0;
-    double idmAcc = 0.0;
+    double ttc = 999.0;
+    double targetAcc = 0.0;
+    double currentAcc = 0.0;
+    double accStep = 0.0;
+    double desiredGap = 0.0;
+    double gapRatio = 0.0;
+    double gapError = 0.0;
+    double relVel = 0.0;
 
     vEgo = i2d(cps_i_state.velocity);
     findVehicleAhead(gap, vLead);
-    idmAcc = computeIDM(vEgo, vLead, gap);
-    cps_i_state.accRate = d2i(idmAcc);
+    currentAcc = i2d(cps_i_state.acceleration);
+
+    // 计算 TTC
+    if (vEgo &gt; vLead + 0.1) {
+        ttc = gap / (vEgo - vLead);
+    } else {
+        ttc = 999.0;
+    }
+
+    // 层1: 反应延迟
+    if (ttc &lt; ACC_WARNING_TTC) {
+        if (!dangerDetected) {
+            dangerDetected = true;
+            reactionStep = 0;
+        }
+        reactionStep++;
+    } else {
+        dangerDetected = false;
+        reactionStep = 0;
+    }
+
+    if (dangerDetected &amp;&amp; reactionStep * 0.1 &lt; ACC_REACTION_TIME) {
+        cps_i_state.accRate = d2i(0.0);
+        return;
+    }
+
+    // 层2: 四模式决策
+    desiredGap = ACC_S0 + vEgo * ACC_T_HW;
+
+    if (gap &gt; ACC_APPROACH_DIST) {
+        drivingMode = 0;
+        if (vEgo &lt; ACC_V_SET) {
+            targetAcc = ACC_A_MAX;
+        } else {
+            targetAcc = 0.0;
+        }
+    } else if (gap &gt; desiredGap + 5.0) {
+        drivingMode = 1;
+        gapRatio = (ACC_APPROACH_DIST - gap) / (ACC_APPROACH_DIST - desiredGap - 5.0);
+        gapRatio = clamp_double(gapRatio, 0.0, 1.0);
+        targetAcc = -gapRatio * 2.0;
+        if (vEgo &lt; vLead) {
+            targetAcc = 0.0;
+        }
+    } else if (gap &gt; ACC_S0) {
+        drivingMode = 2;
+        gapError = gap - desiredGap;
+        relVel = vEgo - vLead;
+        targetAcc = ACC_P_GAIN * gapError - 0.5 * relVel;
+        if (targetAcc &lt; ACC_COMFORT_BRAKE) {
+            targetAcc = ACC_COMFORT_BRAKE;
+        }
+        if (targetAcc &gt; ACC_A_MAX) {
+            targetAcc = ACC_A_MAX;
+        }
+    } else {
+        drivingMode = 3;
+        targetAcc = ACC_EMERGENCY_BRAKE;
+    }
+
+    // 层3: 紧急制动覆盖
+    if (ttc &lt; ACC_DANGER_TTC) {
+        drivingMode = 3;
+        targetAcc = ACC_EMERGENCY_BRAKE;
+    } else if (ttc &lt; ACC_WARNING_TTC &amp;&amp; drivingMode != 2) {
+        if (targetAcc &gt; ACC_COMFORT_BRAKE) {
+            targetAcc = ACC_COMFORT_BRAKE;
+        }
+    }
+
+    // 渐进刹车
+    accStep = ACC_BRAKE_RATE * 0.1;
+    if (targetAcc &lt; currentAcc - accStep) {
+        cps_i_state.acceleration = d2i(currentAcc - accStep);
+    } else if (targetAcc &gt; currentAcc + accStep) {
+        cps_i_state.acceleration = d2i(currentAcc + accStep);
+    } else {
+        cps_i_state.acceleration = d2i(targetAcc);
+    }
+
+    if (vEgo &lt;= 0.0 &amp;&amp; cps_i_state.acceleration &lt; d2i(0.0)) {
+        cps_i_state.acceleration = d2i(0.0);
+    }
+
+    cps_i_state.accRate = d2i(0.0);
 }
 
 void reload(){

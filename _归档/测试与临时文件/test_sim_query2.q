@@ -1,0 +1,1 @@
+simulate[<=50;1]{i2d(cps_i_state.position.x),i2d(cps_i_state.position.y),i2d(cps_i_state.orientation),i2d(cps_i_state.velocity),i2d(cps_i_state.acceleration),i2d(obs_i_state[0].position.x),i2d(obs_i_state[0].position.y),i2d(obs_i_state[0].orientation),i2d(obs_i_state[0].velocity),i2d(obs_i_state[0].acceleration)}

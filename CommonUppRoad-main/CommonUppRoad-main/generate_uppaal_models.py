@@ -35,7 +35,7 @@ for xml_file in os.listdir(input_file_folder):
     MAXT = 50
     DEFAULT_VAL = 0.0
     RADAR = 100
-    THRESHOLD = 0.02
+    THRESHOLD = 4.0
     N1 = 1 # sense period
     N2 = 4 # decision-making period
     MAXACT= 2
@@ -423,7 +423,7 @@ def generate_model_for_scenario(scenario, planning_problem_set, output_path):
     MAXT = 50
     DEFAULT_VAL = 0.0
     RADAR = 100
-    THRESHOLD = 0.02
+    THRESHOLD = 4.0
     N1 = 1
     N2 = 4
     MAXACT = 2

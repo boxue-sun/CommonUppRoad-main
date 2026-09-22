@@ -1,0 +1,667 @@
+{
+  "param_space": {
+    "speed_factor": {
+      "values": [
+        0.5,
+        1.0,
+        1.5
+      ],
+      "description": "Obstacle speed multiplier"
+    },
+    "lateral_offset": {
+      "values": [
+        -15,
+        -10,
+        -5,
+        0,
+        5,
+        10,
+        15
+      ],
+      "description": "Lateral offset (m), negative=toward ego"
+    },
+    "heading_offset": {
+      "values": [
+        -1.5,
+        -0.8,
+        0,
+        0.8,
+        1.5
+      ],
+      "description": "Heading offset (rad), negative=toward ego"
+    }
+  },
+  "mutations": [
+    {
+      "id": 0,
+      "speed_factor": 0.5,
+      "lateral_offset": -15,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 1,
+      "speed_factor": 0.5,
+      "lateral_offset": -15,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 2,
+      "speed_factor": 0.5,
+      "lateral_offset": -15,
+      "heading_offset": 0
+    },
+    {
+      "id": 3,
+      "speed_factor": 0.5,
+      "lateral_offset": -15,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 4,
+      "speed_factor": 0.5,
+      "lateral_offset": -15,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 5,
+      "speed_factor": 0.5,
+      "lateral_offset": -10,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 6,
+      "speed_factor": 0.5,
+      "lateral_offset": -10,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 7,
+      "speed_factor": 0.5,
+      "lateral_offset": -10,
+      "heading_offset": 0
+    },
+    {
+      "id": 8,
+      "speed_factor": 0.5,
+      "lateral_offset": -10,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 9,
+      "speed_factor": 0.5,
+      "lateral_offset": -10,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 10,
+      "speed_factor": 0.5,
+      "lateral_offset": -5,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 11,
+      "speed_factor": 0.5,
+      "lateral_offset": -5,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 12,
+      "speed_factor": 0.5,
+      "lateral_offset": -5,
+      "heading_offset": 0
+    },
+    {
+      "id": 13,
+      "speed_factor": 0.5,
+      "lateral_offset": -5,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 14,
+      "speed_factor": 0.5,
+      "lateral_offset": -5,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 15,
+      "speed_factor": 0.5,
+      "lateral_offset": 0,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 16,
+      "speed_factor": 0.5,
+      "lateral_offset": 0,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 17,
+      "speed_factor": 0.5,
+      "lateral_offset": 0,
+      "heading_offset": 0
+    },
+    {
+      "id": 18,
+      "speed_factor": 0.5,
+      "lateral_offset": 0,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 19,
+      "speed_factor": 0.5,
+      "lateral_offset": 0,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 20,
+      "speed_factor": 0.5,
+      "lateral_offset": 5,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 21,
+      "speed_factor": 0.5,
+      "lateral_offset": 5,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 22,
+      "speed_factor": 0.5,
+      "lateral_offset": 5,
+      "heading_offset": 0
+    },
+    {
+      "id": 23,
+      "speed_factor": 0.5,
+      "lateral_offset": 5,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 24,
+      "speed_factor": 0.5,
+      "lateral_offset": 5,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 25,
+      "speed_factor": 0.5,
+      "lateral_offset": 10,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 26,
+      "speed_factor": 0.5,
+      "lateral_offset": 10,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 27,
+      "speed_factor": 0.5,
+      "lateral_offset": 10,
+      "heading_offset": 0
+    },
+    {
+      "id": 28,
+      "speed_factor": 0.5,
+      "lateral_offset": 10,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 29,
+      "speed_factor": 0.5,
+      "lateral_offset": 10,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 30,
+      "speed_factor": 0.5,
+      "lateral_offset": 15,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 31,
+      "speed_factor": 0.5,
+      "lateral_offset": 15,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 32,
+      "speed_factor": 0.5,
+      "lateral_offset": 15,
+      "heading_offset": 0
+    },
+    {
+      "id": 33,
+      "speed_factor": 0.5,
+      "lateral_offset": 15,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 34,
+      "speed_factor": 0.5,
+      "lateral_offset": 15,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 35,
+      "speed_factor": 1.0,
+      "lateral_offset": -15,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 36,
+      "speed_factor": 1.0,
+      "lateral_offset": -15,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 37,
+      "speed_factor": 1.0,
+      "lateral_offset": -15,
+      "heading_offset": 0
+    },
+    {
+      "id": 38,
+      "speed_factor": 1.0,
+      "lateral_offset": -15,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 39,
+      "speed_factor": 1.0,
+      "lateral_offset": -15,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 40,
+      "speed_factor": 1.0,
+      "lateral_offset": -10,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 41,
+      "speed_factor": 1.0,
+      "lateral_offset": -10,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 42,
+      "speed_factor": 1.0,
+      "lateral_offset": -10,
+      "heading_offset": 0
+    },
+    {
+      "id": 43,
+      "speed_factor": 1.0,
+      "lateral_offset": -10,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 44,
+      "speed_factor": 1.0,
+      "lateral_offset": -10,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 45,
+      "speed_factor": 1.0,
+      "lateral_offset": -5,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 46,
+      "speed_factor": 1.0,
+      "lateral_offset": -5,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 47,
+      "speed_factor": 1.0,
+      "lateral_offset": -5,
+      "heading_offset": 0
+    },
+    {
+      "id": 48,
+      "speed_factor": 1.0,
+      "lateral_offset": -5,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 49,
+      "speed_factor": 1.0,
+      "lateral_offset": -5,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 50,
+      "speed_factor": 1.0,
+      "lateral_offset": 0,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 51,
+      "speed_factor": 1.0,
+      "lateral_offset": 0,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 52,
+      "speed_factor": 1.0,
+      "lateral_offset": 0,
+      "heading_offset": 0
+    },
+    {
+      "id": 53,
+      "speed_factor": 1.0,
+      "lateral_offset": 0,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 54,
+      "speed_factor": 1.0,
+      "lateral_offset": 0,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 55,
+      "speed_factor": 1.0,
+      "lateral_offset": 5,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 56,
+      "speed_factor": 1.0,
+      "lateral_offset": 5,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 57,
+      "speed_factor": 1.0,
+      "lateral_offset": 5,
+      "heading_offset": 0
+    },
+    {
+      "id": 58,
+      "speed_factor": 1.0,
+      "lateral_offset": 5,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 59,
+      "speed_factor": 1.0,
+      "lateral_offset": 5,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 60,
+      "speed_factor": 1.0,
+      "lateral_offset": 10,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 61,
+      "speed_factor": 1.0,
+      "lateral_offset": 10,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 62,
+      "speed_factor": 1.0,
+      "lateral_offset": 10,
+      "heading_offset": 0
+    },
+    {
+      "id": 63,
+      "speed_factor": 1.0,
+      "lateral_offset": 10,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 64,
+      "speed_factor": 1.0,
+      "lateral_offset": 10,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 65,
+      "speed_factor": 1.0,
+      "lateral_offset": 15,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 66,
+      "speed_factor": 1.0,
+      "lateral_offset": 15,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 67,
+      "speed_factor": 1.0,
+      "lateral_offset": 15,
+      "heading_offset": 0
+    },
+    {
+      "id": 68,
+      "speed_factor": 1.0,
+      "lateral_offset": 15,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 69,
+      "speed_factor": 1.0,
+      "lateral_offset": 15,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 70,
+      "speed_factor": 1.5,
+      "lateral_offset": -15,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 71,
+      "speed_factor": 1.5,
+      "lateral_offset": -15,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 72,
+      "speed_factor": 1.5,
+      "lateral_offset": -15,
+      "heading_offset": 0
+    },
+    {
+      "id": 73,
+      "speed_factor": 1.5,
+      "lateral_offset": -15,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 74,
+      "speed_factor": 1.5,
+      "lateral_offset": -15,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 75,
+      "speed_factor": 1.5,
+      "lateral_offset": -10,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 76,
+      "speed_factor": 1.5,
+      "lateral_offset": -10,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 77,
+      "speed_factor": 1.5,
+      "lateral_offset": -10,
+      "heading_offset": 0
+    },
+    {
+      "id": 78,
+      "speed_factor": 1.5,
+      "lateral_offset": -10,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 79,
+      "speed_factor": 1.5,
+      "lateral_offset": -10,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 80,
+      "speed_factor": 1.5,
+      "lateral_offset": -5,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 81,
+      "speed_factor": 1.5,
+      "lateral_offset": -5,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 82,
+      "speed_factor": 1.5,
+      "lateral_offset": -5,
+      "heading_offset": 0
+    },
+    {
+      "id": 83,
+      "speed_factor": 1.5,
+      "lateral_offset": -5,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 84,
+      "speed_factor": 1.5,
+      "lateral_offset": -5,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 85,
+      "speed_factor": 1.5,
+      "lateral_offset": 0,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 86,
+      "speed_factor": 1.5,
+      "lateral_offset": 0,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 87,
+      "speed_factor": 1.5,
+      "lateral_offset": 0,
+      "heading_offset": 0
+    },
+    {
+      "id": 88,
+      "speed_factor": 1.5,
+      "lateral_offset": 0,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 89,
+      "speed_factor": 1.5,
+      "lateral_offset": 0,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 90,
+      "speed_factor": 1.5,
+      "lateral_offset": 5,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 91,
+      "speed_factor": 1.5,
+      "lateral_offset": 5,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 92,
+      "speed_factor": 1.5,
+      "lateral_offset": 5,
+      "heading_offset": 0
+    },
+    {
+      "id": 93,
+      "speed_factor": 1.5,
+      "lateral_offset": 5,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 94,
+      "speed_factor": 1.5,
+      "lateral_offset": 5,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 95,
+      "speed_factor": 1.5,
+      "lateral_offset": 10,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 96,
+      "speed_factor": 1.5,
+      "lateral_offset": 10,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 97,
+      "speed_factor": 1.5,
+      "lateral_offset": 10,
+      "heading_offset": 0
+    },
+    {
+      "id": 98,
+      "speed_factor": 1.5,
+      "lateral_offset": 10,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 99,
+      "speed_factor": 1.5,
+      "lateral_offset": 10,
+      "heading_offset": 1.5
+    },
+    {
+      "id": 100,
+      "speed_factor": 1.5,
+      "lateral_offset": 15,
+      "heading_offset": -1.5
+    },
+    {
+      "id": 101,
+      "speed_factor": 1.5,
+      "lateral_offset": 15,
+      "heading_offset": -0.8
+    },
+    {
+      "id": 102,
+      "speed_factor": 1.5,
+      "lateral_offset": 15,
+      "heading_offset": 0
+    },
+    {
+      "id": 103,
+      "speed_factor": 1.5,
+      "lateral_offset": 15,
+      "heading_offset": 0.8
+    },
+    {
+      "id": 104,
+      "speed_factor": 1.5,
+      "lateral_offset": 15,
+      "heading_offset": 1.5
+    }
+  ],
+  "total_count": 105
+}
